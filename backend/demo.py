@@ -10,7 +10,7 @@ from dotenv import load_dotenv
 
 # Import our modules
 from race_replay import RaceReplay
-from race_monitor import RaceMonitor
+from race_monitor_optimized import OptimizedRaceMonitor as RaceMonitor
 
 load_dotenv()
 
