@@ -30,3 +30,4 @@ data/*.json
 
 # Logs
 *.log
+data/race-strategy-analysis/
