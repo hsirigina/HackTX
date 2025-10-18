@@ -433,7 +433,7 @@ CREATE TABLE agent_recommendations (
 - **Language:** Python 3.10+
 - **Data Source:** FastF1 library (historical F1 data)
 - **Database:** Supabase (PostgreSQL with real-time subscriptions)
-- **AI Agents:** Anthropic Claude API or OpenAI GPT-4
+- **AI Agents:** Google Gemini API (gemini-2.0-flash-exp - free tier)
 - **Web Framework:** FastAPI (REST + WebSocket endpoints)
 - **Serial Communication:** PySerial (Arduino connection)
 
@@ -620,9 +620,9 @@ CREATE TABLE agent_recommendations (
 
 ## Open Questions
 
-1. **Which Claude/GPT model for agents?** Claude 3.5 Sonnet vs GPT-4 Turbo
-   - Trade-off: Cost vs. response quality
-   - Recommendation: Claude Sonnet (better reasoning for strategy)
+1. **Which Gemini model for agents?** gemini-2.0-flash-exp vs gemini-1.5-pro
+   - Trade-off: Speed vs. response quality (both free)
+   - Recommendation: gemini-2.0-flash-exp (faster, good reasoning, free)
 
 2. **Historical race selection?**
    - Candidates: Monaco 2024 (Piastri vs Leclerc), Singapore 2023 (Sainz strategy)

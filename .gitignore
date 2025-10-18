@@ -1,0 +1,32 @@
+# Environment
+.env
+venv/
+env/
+__pycache__/
+*.pyc
+
+# FastF1 cache
+cache/
+
+# Node modules
+node_modules/
+frontend/node_modules/
+frontend/build/
+frontend/.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data
+data/*.csv
+data/*.json
+
+# Logs
+*.log
