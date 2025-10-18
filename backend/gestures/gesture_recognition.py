@@ -1,6 +1,6 @@
 """
 Gesture Recognition System using MediaPipe Hands
-Detects: Fist Pump, Swipe Right, Swipe Left, Point, Open Palm
+Detects: Swipe Right, Swipe Left, Thumbs Up, Peace Sign
 """
 
 import cv2
@@ -26,11 +26,10 @@ class GestureRecognizer:
     """
     
     # Gesture names
-    FIST_PUMP = "Fist Pump"
     SWIPE_RIGHT = "Swipe Right"
     SWIPE_LEFT = "Swipe Left"
-    POINT = "Point"
-    OPEN_PALM = "Open Palm"
+    THUMBS_UP = "Thumbs Up"
+    PEACE_SIGN = "Peace Sign"
     NO_GESTURE = "No Gesture"
     
     def __init__(self, confidence_threshold=0.85, detection_confidence=0.7, tracking_confidence=0.7):
@@ -62,7 +61,7 @@ class GestureRecognizer:
         # State tracking
         self.last_gesture = None
         self.last_gesture_time = 0
-        self.gesture_cooldown = 0.8  # seconds - reduced for more responsive detection
+        self.gesture_cooldown = 1.0  # seconds - increased to prevent false positives
         
     def _is_finger_extended(self, landmarks, finger_tip_id, finger_pip_id, finger_mcp_id):
         """Check if a finger is extended"""
@@ -82,67 +81,48 @@ class GestureRecognizer:
         # Thumb extends horizontally
         return abs(thumb_tip.x - thumb_mcp.x) > abs(thumb_ip.x - thumb_mcp.x)
     
-    def _detect_fist(self, landmarks):
-        """Detect if hand is in a fist"""
-        # Check if all fingers are curled
-        fingers_curled = 0
+    def _detect_thumbs_up(self, landmarks):
+        """Detect thumbs up (only thumb extended upward)"""
+        # Thumb must be extended
+        thumb_extended = self._is_thumb_extended(landmarks)
         
-        # Index finger
-        if not self._is_finger_extended(landmarks, 8, 6, 5):
-            fingers_curled += 1
+        # Check if thumb is pointing up (thumb tip higher than thumb base)
+        thumb_tip = landmarks[4]
+        thumb_base = landmarks[2]
+        thumb_mcp = landmarks[1]
         
-        # Middle finger
-        if not self._is_finger_extended(landmarks, 12, 10, 9):
-            fingers_curled += 1
-            
-        # Ring finger
-        if not self._is_finger_extended(landmarks, 16, 14, 13):
-            fingers_curled += 1
-            
-        # Pinky
-        if not self._is_finger_extended(landmarks, 20, 18, 17):
-            fingers_curled += 1
+        # Stricter upward check - thumb tip must be significantly higher
+        thumb_pointing_up = thumb_tip.y < thumb_base.y - 0.08 and thumb_tip.y < thumb_mcp.y - 0.05
         
-        return fingers_curled >= 3
-    
-    def _detect_open_palm(self, landmarks):
-        """Detect open palm (all fingers extended)"""
-        fingers_extended = 0
-        
-        # Thumb
-        if self._is_thumb_extended(landmarks):
-            fingers_extended += 1
-        
-        # Index finger
-        if self._is_finger_extended(landmarks, 8, 6, 5):
-            fingers_extended += 1
-        
-        # Middle finger
-        if self._is_finger_extended(landmarks, 12, 10, 9):
-            fingers_extended += 1
-            
-        # Ring finger
-        if self._is_finger_extended(landmarks, 16, 14, 13):
-            fingers_extended += 1
-            
-        # Pinky
-        if self._is_finger_extended(landmarks, 20, 18, 17):
-            fingers_extended += 1
-        
-        return fingers_extended >= 4
-    
-    def _detect_point(self, landmarks):
-        """Detect pointing gesture (only index finger extended)"""
-        # Index finger must be extended
-        if not self._is_finger_extended(landmarks, 8, 6, 5):
-            return False
-        
-        # Other fingers should be curled
+        # ALL other fingers must be curled
+        index_curled = not self._is_finger_extended(landmarks, 8, 6, 5)
         middle_curled = not self._is_finger_extended(landmarks, 12, 10, 9)
         ring_curled = not self._is_finger_extended(landmarks, 16, 14, 13)
         pinky_curled = not self._is_finger_extended(landmarks, 20, 18, 17)
         
-        return middle_curled and ring_curled and pinky_curled
+        # ALL 4 fingers must be curled
+        all_fingers_curled = index_curled and middle_curled and ring_curled and pinky_curled
+        
+        return thumb_extended and thumb_pointing_up and all_fingers_curled
+    
+    def _detect_peace_sign(self, landmarks):
+        """Detect peace sign (index and middle fingers extended)"""
+        # Index and middle fingers must be extended
+        index_extended = self._is_finger_extended(landmarks, 8, 6, 5)
+        middle_extended = self._is_finger_extended(landmarks, 12, 10, 9)
+        
+        if not (index_extended and middle_extended):
+            return False
+        
+        # Ring and pinky must be curled
+        ring_curled = not self._is_finger_extended(landmarks, 16, 14, 13)
+        pinky_curled = not self._is_finger_extended(landmarks, 20, 18, 17)
+        
+        # Thumb should be curled or tucked
+        thumb_not_extended = landmarks[4].y > landmarks[2].y - 0.05
+        
+        return (index_extended and middle_extended and 
+                ring_curled and pinky_curled and thumb_not_extended)
     
     def _detect_swipe(self):
         """Detect horizontal swipe gestures"""
@@ -187,37 +167,6 @@ class GestureRecognizer:
                     return self.SWIPE_LEFT, confidence
         
         return None, 0.0
-    
-    def _detect_fist_pump(self):
-        """Detect fist pump (fist raised quickly)"""
-        if len(self.height_history) < 6:  # Reduced from 8 for faster detection
-            return False, 0.0
-        
-        heights = list(self.height_history)
-        
-        # Check if hand moved up
-        start_y = heights[0]
-        end_y = heights[-1]
-        
-        # Y decreases as hand moves up in image coordinates
-        dy = start_y - end_y
-        
-        # Lowered threshold for easier detection
-        if dy > 0.10:  # Reduced from 0.15 (10% of frame)
-            # Check if movement is generally upward (allow some jitter)
-            upward_count = 0
-            total_moves = len(heights) - 1
-            
-            for i in range(total_moves):
-                if heights[i] >= heights[i+1] - 0.02:  # Allow small downward jitter
-                    upward_count += 1
-            
-            # Need at least 65% of movements upward (more lenient than swipes)
-            if upward_count / total_moves >= 0.65:
-                confidence = min(dy / 0.20, 1.0)  # Adjusted confidence scale
-                return True, confidence
-        
-        return False, 0.0
     
     def process_frame(self, frame) -> Tuple[np.ndarray, Optional[GestureResult]]:
         """
@@ -264,32 +213,29 @@ class GestureRecognizer:
                 detected_gesture = None
                 confidence = 0.0
                 
-                # Check for fist (for fist pump detection)
-                is_fist = self._detect_fist(landmarks)
+                # Check for swipes first (motion gestures)
+                swipe_gesture, swipe_confidence = self._detect_swipe()
+                if swipe_gesture and swipe_confidence >= self.confidence_threshold:
+                    detected_gesture = swipe_gesture
+                    confidence = swipe_confidence
                 
-                if is_fist:
-                    # Check for fist pump (upward motion)
-                    is_pump, pump_confidence = self._detect_fist_pump()
-                    if is_pump and pump_confidence >= self.confidence_threshold:
-                        detected_gesture = self.FIST_PUMP
-                        confidence = pump_confidence
-                
-                # Check for swipes
+                # Check static gestures - simpler now with just 2 gestures
                 if not detected_gesture:
-                    swipe_gesture, swipe_confidence = self._detect_swipe()
-                    if swipe_gesture and swipe_confidence >= self.confidence_threshold:
-                        detected_gesture = swipe_gesture
-                        confidence = swipe_confidence
-                
-                # Check for point
-                if not detected_gesture and self._detect_point(landmarks):
-                    detected_gesture = self.POINT
-                    confidence = 0.95
-                
-                # Check for open palm
-                if not detected_gesture and self._detect_open_palm(landmarks):
-                    detected_gesture = self.OPEN_PALM
-                    confidence = 0.95
+                    # Check peace sign first (more specific - 2 fingers)
+                    if self._detect_peace_sign(landmarks):
+                        detected_gesture = self.PEACE_SIGN
+                        confidence = 0.95
+                    
+                    # Then thumbs up
+                    elif self._detect_thumbs_up(landmarks):
+                        # Make sure thumb is clearly UP
+                        thumb_tip = landmarks[4]
+                        wrist = landmarks[0]
+                        thumb_clearly_up = thumb_tip.y < wrist.y - 0.1
+                        
+                        if thumb_clearly_up:
+                            detected_gesture = self.THUMBS_UP
+                            confidence = 0.95
                 
                 # Create result if gesture detected
                 if detected_gesture and confidence >= self.confidence_threshold:
@@ -302,7 +248,7 @@ class GestureRecognizer:
                     self.last_gesture_time = current_time
                     
                     # Clear history after motion gesture
-                    if detected_gesture in [self.SWIPE_LEFT, self.SWIPE_RIGHT, self.FIST_PUMP]:
+                    if detected_gesture in [self.SWIPE_LEFT, self.SWIPE_RIGHT]:
                         self.position_history.clear()
                         self.height_history.clear()
         
@@ -388,11 +334,10 @@ class GestureVisualizer:
         y_pos = 60
         gestures_guide = [
             "Gestures:",
-            "- Fist Pump: Closed fist, raise up quickly",
-            "- Swipe Right: Move hand right",
-            "- Swipe Left: Move hand left",
-            "- Point: Index finger extended",
-            "- Open Palm: All fingers extended"
+            "- Swipe Right: Move open hand right (Next)",
+            "- Swipe Left: Move open hand left (Previous)",
+            "- Thumbs Up: Lock in strategy",
+            "- Peace Sign: Show details"
         ]
         
         for text in gestures_guide:

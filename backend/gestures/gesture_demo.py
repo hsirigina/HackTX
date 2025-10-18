@@ -20,11 +20,10 @@ def main():
     print("Gesture Recognition Demo")
     print("=" * 60)
     print("\nSupported Gestures:")
-    print("  1. Fist Pump - Close fist and raise it up quickly")
-    print("  2. Swipe Right - Move hand from left to right")
-    print("  3. Swipe Left - Move hand from right to left")
-    print("  4. Point - Extend only index finger")
-    print("  5. Open Palm - Extend all fingers")
+    print("  1. Swipe Right - Move open hand left to right (Next scenario)")
+    print("  2. Swipe Left - Move open hand right to left (Previous scenario)")
+    print("  3. Thumbs Up - Lock in selected strategy")
+    print("  4. Peace Sign - Show details")
     print("\nPress 'q' to quit")
     print("=" * 60)
     
@@ -58,11 +57,10 @@ def main():
     
     # Gesture history for logging
     gesture_count = {
-        GestureRecognizer.FIST_PUMP: 0,
         GestureRecognizer.SWIPE_RIGHT: 0,
         GestureRecognizer.SWIPE_LEFT: 0,
-        GestureRecognizer.POINT: 0,
-        GestureRecognizer.OPEN_PALM: 0
+        GestureRecognizer.THUMBS_UP: 0,
+        GestureRecognizer.PEACE_SIGN: 0
     }
     
     last_gesture_result = None
