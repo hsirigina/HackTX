@@ -92,6 +92,11 @@ function LiveSim() {
       setApiCalls(1)
       setRaceStarted(true)
 
+      // Update selected race with actual total laps from backend if available
+      if (data.totalLaps && selectedRace) {
+        setSelectedRace({...selectedRace, laps: data.totalLaps})
+      }
+
       // Add initial event
       setEvents([{
         lap_number: data.currentLap,
@@ -153,36 +158,13 @@ function LiveSim() {
           reasoning: 'Race completed!'
         }, ...prev])
       } else {
-        // Animate lap progression if laps were simulated
-        const startLap = currentLap
-        const endLap = data.currentLap
-        const lapsToAnimate = Math.min(endLap - startLap, 20) // Cap animation
-
-        // Animate through laps
-        if (lapsToAnimate > 0) {
-          let animatedLap = startLap
-          const animationInterval = setInterval(() => {
-            animatedLap++
-            setCurrentLap(animatedLap)
-
-            if (animatedLap >= endLap) {
-              clearInterval(animationInterval)
-              // Final update
-              setCurrentLap(data.currentLap)
-              setScenarios(data.strategies)
-              setRaceState(data.state)
-              setCurrentScenarioIndex(0)
-              setLoading(false)
-            }
-          }, 200) // Update every 200ms (5 laps per second)
-        } else {
-          // No animation needed
-          setCurrentLap(data.currentLap)
-          setScenarios(data.strategies)
-          setRaceState(data.state)
-          setCurrentScenarioIndex(0)
-          setLoading(false)
-        }
+        // Update state immediately - no lap-by-lap animation
+        // (position data only exists at decision points, not per-lap)
+        setCurrentLap(data.currentLap)
+        setScenarios(data.strategies)
+        setRaceState(data.state)
+        setCurrentScenarioIndex(0)
+        setLoading(false)
       }
 
       if (data.raceFinished) {
@@ -266,8 +248,8 @@ function LiveSim() {
       },
       position: {
         position: raceState.position || 3,
-        gap_ahead: '+0.5',
-        gap_behind: '-1.2',
+        gap_ahead: raceState.gapAhead || '--',
+        gap_behind: raceState.gapBehind || '--',
         status: 'active',
         triggers: []
       },

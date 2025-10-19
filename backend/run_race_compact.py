@@ -261,27 +261,48 @@ for lap in range(1, TOTAL_LAPS + 1):
     # Show progress only at key moments (not every lap)
     # This creates a "fast-forward" feeling between decisions
 
-    # === TACTICAL DECISION (Rule-based with rate limiting) ===
-    # Triggers when opportunity exists AND cooldown has passed
-    tactical_opportunity = (
-        abs(gap_ahead) < 3.0 or  # Close to car ahead - can attack
-        gap_behind < 2.0 or      # Car behind is close - need to defend
-        (position <= 3 and abs(leader_gap) < 10.0)  # Fighting for podium
-    )
+    # === TACTICAL DECISION (Dynamic based on race conditions) ===
+    # Only trigger when there's a real strategic opportunity
+    tactical_opportunity = False
+    context = ""
+    recommended = 1  # Default to MAINTAIN
+
+    # Calculate race progress
+    race_progress = lap / TOTAL_LAPS
+    laps_remaining = TOTAL_LAPS - lap
+
+    # Opportunity 1: Close battle (within 1.5s - actual racing gap)
+    if gap_ahead > 0 and gap_ahead < 1.5 and gap_behind > 2.0:
+        tactical_opportunity = True
+        context = f"Attack opportunity: {gap_ahead:.1f}s ahead"
+        recommended = 0  # PUSH
+
+    # Opportunity 2: Under serious pressure (being hunted)
+    elif gap_behind > 0 and gap_behind < 1.5 and gap_ahead > 2.0:
+        tactical_opportunity = True
+        context = f"Defending position: {gap_behind:.1f}s behind"
+        recommended = 0  # PUSH
+
+    # Opportunity 3: Tire management critical (>70% wear and still >15 laps to go)
+    elif tire_pct > 0.7 and laps_remaining > 15 and pit_plan is None:
+        tactical_opportunity = True
+        context = f"Tire crisis: {int(tire_pct * 100)}% wear, {laps_remaining} laps left"
+        recommended = 2  # CONSERVE
+
+    # Opportunity 4: Final stint push (last 15 laps, fresh tires <40% wear)
+    elif laps_remaining <= 15 and tire_pct < 0.4:
+        tactical_opportunity = True
+        context = f"Final push: {laps_remaining} laps, fresh tires"
+        recommended = 0  # PUSH
+
+    # Opportunity 5: Mid-race tire saving (30-60% race, medium tire wear)
+    elif 0.3 <= race_progress <= 0.6 and 0.4 <= tire_pct <= 0.6:
+        tactical_opportunity = True
+        context = f"Mid-race management: Lap {lap}/{TOTAL_LAPS}"
+        recommended = 2  # CONSERVE
 
     if tactical_opportunity and (lap - last_tactical_lap) >= TACTICAL_COOLDOWN:
         print()  # Clear fast-forward line
-
-        # Determine context for recommendation
-        if abs(gap_ahead) < 3.0:
-            context = f"Close gap: {abs(gap_ahead):.1f}s ahead"
-            recommended = 0  # PUSH
-        elif gap_behind < 2.0:
-            context = f"Under pressure: {gap_behind:.1f}s behind"
-            recommended = 0  # PUSH
-        else:
-            context = f"P{position} - Managing position"
-            recommended = 1  # MAINTAIN
 
         opts = [
             {'name': 'PUSH', 'impact': '-0.2s/lap +20%wear', 'conf': 'RECOMMENDED' if recommended == 0 else 'ALTERNATIVE', 'pace': -0.2, 'wear': 0.2},

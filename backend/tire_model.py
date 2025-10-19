@@ -12,22 +12,23 @@ class TireDegradationModel:
     """
 
     # Tire compound characteristics (degradation rate in seconds/lap)
-    # Tuned to match Bahrain 2024 pace (VER avg: 96.57s)
+    # Tire compound characteristics (relative to base laptime)
+    # Reduced deltas to prevent strategy from overwhelming starting position
     COMPOUND_WEAR_RATES = {
         'SOFT': {
-            'initial_laptime': 96.0,  # seconds - fastest compound
-            'wear_start': 0.02,  # seconds/lap at start (reduced for realism)
-            'wear_end': 0.15,    # seconds/lap at end of life (reduced)
+            'pace_delta': -0.1,  # 0.1s faster than base (was -0.3)
+            'wear_start': 0.02,  # seconds/lap at start
+            'wear_end': 0.15,    # seconds/lap at end of life
             'max_laps': 25       # typical max stint length
         },
         'MEDIUM': {
-            'initial_laptime': 96.3,  # slightly slower than SOFT
+            'pace_delta': 0.0,   # Same as base laptime
             'wear_start': 0.02,
             'wear_end': 0.08,    # less degradation than SOFT
             'max_laps': 40
         },
         'HARD': {
-            'initial_laptime': 96.5,  # slowest but most durable
+            'pace_delta': 0.1,   # 0.1s slower than base (was 0.2)
             'wear_start': 0.01,
             'wear_end': 0.05,    # minimal degradation
             'max_laps': 60
@@ -120,8 +121,8 @@ class TireDegradationModel:
         """
         params = self.COMPOUND_WEAR_RATES[compound]
 
-        # Base lap time for this compound
-        base = params['initial_laptime']
+        # Base lap time for this compound (track-specific base + compound delta)
+        base = self.base_laptime + params['pace_delta']
 
         # Tire degradation effect (linear with tire age)
         # MULTIPLIED by driving style (aggressive = more wear, conservative = less)
