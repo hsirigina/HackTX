@@ -39,6 +39,54 @@ function AgentDashboard() {
     startRace()
   }, [])
 
+  // Poll gesture server for hand gestures
+  useEffect(() => {
+    let lastGestureTime = 0
+    const GESTURE_COOLDOWN = 1000 // 1 second cooldown between gestures
+
+    const pollGestures = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/gesture')
+        const data = await response.json()
+
+        // Log all gestures for debugging
+        if (data.gesture !== 'No Gesture') {
+          console.log('Gesture received:', data.gesture, 'Current index:', currentScenarioIndex, 'Total scenarios:', scenarios.length)
+        }
+
+        const now = Date.now()
+
+        // Check if enough time has passed since last gesture
+        if (now - lastGestureTime < GESTURE_COOLDOWN) {
+          return
+        }
+
+        if (data.gesture === 'Swipe Left' && currentScenarioIndex > 0) {
+          console.log('✅ Detected Swipe Left - Moving to previous scenario')
+          goToPrevScenario()
+          lastGestureTime = now
+          // Clear the gesture
+          await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+        } else if (data.gesture === 'Swipe Right' && currentScenarioIndex < scenarios.length - 1) {
+          console.log('✅ Detected Swipe Right - Moving to next scenario')
+          goToNextScenario()
+          lastGestureTime = now
+          // Clear the gesture
+          await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+        } else if (data.gesture !== 'No Gesture') {
+          console.log('❌ Gesture not triggering navigation. Gesture:', data.gesture, 'CanGoNext:', currentScenarioIndex < scenarios.length - 1, 'CanGoPrev:', currentScenarioIndex > 0)
+        }
+      } catch (error) {
+        // Gesture server not running, that's okay
+        console.debug('Gesture server not available')
+      }
+    }
+
+    // Poll every 300ms for gestures
+    const interval = setInterval(pollGestures, 300)
+    return () => clearInterval(interval)
+  }, [currentScenarioIndex, scenarios.length])
+
   const startRace = async () => {
     setInitialLoading(true)
     const startTime = Date.now()

@@ -29,12 +29,12 @@ def run_gesture_recognition():
     recognizer = GestureRecognizer()
     
     print("🎥 Starting camera...")
-    
-    # Try camera index 1 first (built-in Mac camera), then 0 (might be iPhone)
-    cap = cv2.VideoCapture(1)
+
+    # Try camera index 0 first (built-in Mac camera), then 1 (might be iPhone)
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print("Camera 1 not available, trying camera 0...")
-        cap = cv2.VideoCapture(0)
+        print("Camera 0 not available, trying camera 1...")
+        cap = cv2.VideoCapture(1)
     
     if not cap.isOpened():
         print("❌ ERROR: Could not open camera!")
