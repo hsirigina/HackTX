@@ -1,0 +1,1090 @@
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Orbitron:wght@400;700;900&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  overflow-x: hidden;
+  margin: 0;
+  padding: 0;
+  background: #141e2e;
+}
+
+.mclaren-dashboard {
+  background: linear-gradient(135deg, #141e2e 0%, #1a2635 50%, #141e2e 100%);
+  color: #fff;
+  font-family: 'Rajdhani', sans-serif;
+  min-height: 100vh;
+  height: 100vh;
+  width: 100vw;
+  overflow-y: auto;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* Top Header */
+.top-header {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 50px;
+  background: rgba(20, 30, 46, 0.6);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.header-left,
+.header-right {
+  font-size: 10px;
+  letter-spacing: 4px;
+  color: #667788;
+  font-weight: 600;
+}
+
+/* Main Container */
+.main-container {
+  display: grid;
+  grid-template-columns: 550px 1fr 550px;
+  gap: 25px;
+  min-height: 500px;
+  padding: 20px 30px;
+}
+
+/* Driver Columns */
+.driver-column {
+  padding: 20px 25px;
+  background: rgba(20, 30, 46, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.driver-info-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.driver-info-header.reverse {
+  flex-direction: row-reverse;
+}
+
+.driver-info-header .label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: #5a6a7a;
+  font-weight: 600;
+}
+
+/* Driver Name Section */
+.driver-name-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.driver-name-section.reverse {
+  flex-direction: row-reverse;
+}
+
+.driver-name-left h2,
+.driver-name-right h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.driver-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  font-size: 16px;
+  font-weight: 700;
+  border-radius: 2px;
+  margin-right: 10px;
+}
+
+.driver-badge.blue {
+  background: #00bfff;
+  color: #000;
+}
+
+.driver-badge.yellow {
+  background: #ffd700;
+  color: #000;
+}
+
+.driver-delta {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.driver-delta.blue {
+  color: #00bfff;
+}
+
+.driver-delta.yellow {
+  color: #ffd700;
+}
+
+.position-huge {
+  font-size: 140px;
+  font-weight: 900;
+  line-height: 0.8;
+  color: rgba(255, 255, 255, 0.08);
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Driver Stats */
+.driver-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+  font-size: 11px;
+}
+
+.driver-stats.reverse .stat-line {
+  flex-direction: row-reverse;
+}
+
+.stat-line {
+  display: flex;
+  justify-content: space-between;
+}
+
+.stat-label {
+  color: #5a6a7a;
+  font-size: 9px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.stat-value {
+  color: #fff;
+  font-weight: 700;
+  font-size: 12px;
+}
+
+/* Car Display */
+.car-display {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 15px 0;
+  min-height: 160px;
+  padding: 10px;
+}
+
+.car-display img {
+  width: 100%;
+  max-width: 180px;
+  height: auto;
+  filter: drop-shadow(0 4px 20px rgba(255, 255, 255, 0.15));
+  object-fit: contain;
+}
+
+/* Safety Status */
+.safety-status {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 15px 0;
+  font-size: 10px;
+}
+
+.safety-status.reverse {
+  flex-direction: row-reverse;
+}
+
+.status-label {
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.status-action {
+  padding: 8px 16px;
+  border-radius: 2px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  font-size: 11px;
+}
+
+.status-action.blue {
+  background: rgba(0, 191, 255, 0.2);
+  border: 2px solid #00bfff;
+  color: #00bfff;
+}
+
+.status-action.yellow {
+  background: rgba(255, 215, 0, 0.2);
+  border: 2px solid #ffd700;
+  color: #ffd700;
+}
+
+/* Fuel Section */
+.fuel-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 15px 0;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.fuel-section.reverse {
+  flex-direction: row-reverse;
+}
+
+.fuel-icon {
+  font-size: 24px;
+}
+
+.fuel-info {
+  flex: 1;
+}
+
+.fuel-lap {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 6px;
+}
+
+.fuel-bar-container {
+  height: 20px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.fuel-bar {
+  height: 100%;
+  transition: width 0.3s ease;
+}
+
+.fuel-bar.blue {
+  background: linear-gradient(90deg, #00bfff, #0088cc);
+}
+
+.fuel-bar.yellow {
+  background: linear-gradient(90deg, #ffd700, #cc9900);
+}
+
+.fuel-status {
+  font-size: 9px;
+  color: #5a6a7a;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.zone-text {
+  text-align: center;
+  font-size: 9px;
+  color: #5a6a7a;
+  margin: 10px 0;
+}
+
+/* Telemetry Row */
+.telemetry-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 15px 0;
+}
+
+.telemetry-row.reverse {
+  direction: rtl;
+}
+
+.telem-box {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.telem-label {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+}
+
+.telem-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Speed Box */
+.speed-box {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  margin: 15px 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.speed-label {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.speed-big {
+  font-size: 48px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.speed-big span {
+  font-size: 16px;
+  color: #5a6a7a;
+  font-weight: 600;
+}
+
+.pace-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: #5a6a7a;
+  font-weight: 600;
+}
+
+.pace-row span:last-child {
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Engine Box */
+.engine-box {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  margin: 15px 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.engine-label {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.engine-gauge {
+  position: relative;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.engine-bar {
+  position: absolute;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.engine-bar.blue {
+  background: linear-gradient(90deg, #00bfff 0%, #00bfff 65%, rgba(0, 191, 255, 0.2) 65%);
+}
+
+.engine-bar.yellow {
+  background: linear-gradient(90deg, #ffd700 0%, #ffd700 70%, rgba(255, 215, 0, 0.2) 70%);
+}
+
+.engine-number {
+  font-size: 44px;
+  font-weight: 900;
+  color: #fff;
+  position: relative;
+  z-index: 1;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.engine-number sub {
+  font-size: 24px;
+}
+
+.engine-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 8px;
+  color: #5a6a7a;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.detail-bars {
+  width: 180px;
+  height: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.detail-bars.blue::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 75%;
+  height: 100%;
+  background: #00bfff;
+}
+
+.detail-bars.yellow::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 80%;
+  height: 100%;
+  background: #ffd700;
+}
+
+/* Center Column */
+.center-column {
+  padding: 20px 30px;
+  background: rgba(25, 35, 50, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+}
+
+.track-header {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.location {
+  font-size: 10px;
+  letter-spacing: 3px;
+  color: #5a6a7a;
+  font-weight: 600;
+}
+
+.lap-weather-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+
+.lap-counter {
+  text-align: center;
+}
+
+.lap-label {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 5px;
+}
+
+.lap-number {
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.weather-box {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 10px 20px;
+  align-items: center;
+}
+
+.weather-condition {
+  grid-column: 1 / 3;
+  font-size: 13px;
+  color: #aabbcc;
+  font-weight: 600;
+}
+
+.temperature {
+  font-size: 48px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.temperature span {
+  font-size: 24px;
+  vertical-align: super;
+}
+
+.wind-info,
+.track-temp-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.wind-label,
+.temp-label {
+  font-size: 8px;
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.wind-value,
+.temp-value {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Track Map */
+.track-map {
+  position: relative;
+  height: 280px;
+  margin: 20px 0;
+}
+
+.track-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.car-marker {
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.drs-zone-badge {
+  position: absolute;
+  bottom: 15px;
+  right: 20px;
+  background: rgba(90, 106, 122, 0.3);
+  padding: 6px 14px;
+  border-radius: 2px;
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  color: #5a6a7a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Telemetry Chart */
+.telemetry-chart {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 2px;
+  margin-top: 20px;
+}
+
+.chart-svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Bottom Section */
+.bottom-section {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 30px;
+  padding: 30px 50px;
+  background: rgba(15, 20, 30, 0.8);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.bottom-left,
+.bottom-right {
+  padding: 0 15px;
+}
+
+.section-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.section-grid.reverse {
+  flex-direction: column-reverse;
+}
+
+.section-title {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* Tire Section */
+.tire-section {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tire-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.tire-content.reverse {
+  flex-direction: row-reverse;
+}
+
+.pirelli-logo {
+  font-size: 11px;
+  color: #ffd700;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+.tire-circle {
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: 3px solid;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.tire-circle.blue {
+  border-color: #00bfff;
+  background: rgba(0, 191, 255, 0.1);
+}
+
+.tire-circle.yellow {
+  border-color: #ffd700;
+  background: rgba(255, 215, 0, 0.1);
+}
+
+.tire-laps {
+  font-size: 24px;
+  font-weight: 900;
+  color: #fff;
+}
+
+.tire-label {
+  font-size: 8px;
+  color: #5a6a7a;
+  font-weight: 600;
+}
+
+.tire-gauges {
+  display: flex;
+  gap: 10px;
+}
+
+.tire-gauge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.gauge-label {
+  font-size: 8px;
+  color: #5a6a7a;
+}
+
+.gauge-ring {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #00bfff;
+  animation: spin 2s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Pit Window Section */
+.pit-window-section {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.window-title {
+  font-size: 9px;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+.window-title.blue {
+  color: #00bfff;
+}
+
+.window-title.yellow {
+  color: #ffd700;
+}
+
+.window-laps {
+  font-size: 32px;
+  font-weight: 900;
+  text-align: center;
+  padding: 12px;
+  border-radius: 2px;
+  margin-bottom: 12px;
+  font-family: 'Orbitron', sans-serif;
+  border: 2px solid;
+}
+
+.window-laps.blue-bg {
+  background: rgba(0, 191, 255, 0.15);
+  color: #00bfff;
+  border-color: #00bfff;
+}
+
+.window-laps.yellow-bg {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border-color: #ffd700;
+}
+
+.window-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stat-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.stat-name {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.stat-name.blue {
+  color: #00bfff;
+}
+
+.stat-name.yellow {
+  color: #ffd700;
+}
+
+.stat-val {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 700;
+}
+
+.stat-val.blue {
+  color: #00bfff;
+}
+
+.stat-val.yellow {
+  color: #ffd700;
+}
+
+/* Raw Telemetry */
+.raw-telemetry {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.telemetry-table {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.telem-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 10px;
+  align-items: center;
+  font-size: 11px;
+}
+
+.telem-label {
+  color: #5a6a7a;
+  font-weight: 600;
+}
+
+.telem-blue {
+  color: #00bfff;
+  font-weight: 700;
+}
+
+.telem-yellow {
+  color: #ffd700;
+  font-weight: 700;
+}
+
+.telem-unit {
+  color: #5a6a7a;
+  font-size: 9px;
+}
+
+/* Bottom Center */
+.bottom-center {
+  padding: 0 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.data-rate-box {
+  text-align: center;
+}
+
+.rate-title {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.rate-bars {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 15px;
+}
+
+.rate-bar {
+  width: 8px;
+  height: 45px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+
+.rate-bar.active {
+  background: #00ff88;
+  box-shadow: 0 0 15px rgba(0, 255, 136, 0.6);
+}
+
+.rate-info {
+  font-size: 11px;
+}
+
+.rate-status {
+  color: #5a6a7a;
+  margin-bottom: 5px;
+}
+
+.rate-speed {
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+}
+
+/* Timeline Section */
+.timeline-section {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 40px;
+  padding: 30px 50px;
+  background: rgba(10, 15, 25, 0.6);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.timeline-title {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 15px;
+}
+
+.timeline-track {
+  position: relative;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 2px;
+}
+
+.timeline-marker {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.marker-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #000;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.marker-dot.blue {
+  background: #00bfff;
+  box-shadow: 0 0 10px #00bfff;
+}
+
+.marker-dot.yellow {
+  background: #ffd700;
+  box-shadow: 0 0 10px #ffd700;
+}
+
+.marker-lap {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.marker-label {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  color: #5a6a7a;
+  white-space: nowrap;
+  margin-top: 8px;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.marker-label.yellow {
+  color: #ffd700;
+}
+
+/* KAMM Bars */
+.timeline-center {
+  width: 400px;
+}
+
+.kamm-title {
+  font-size: 9px;
+  color: #5a6a7a;
+  letter-spacing: 2px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  text-align: center;
+}
+
+.kamm-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 50px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 5px;
+  border-radius: 2px;
+  gap: 1px;
+}
+
+.kamm-bar {
+  flex: 1;
+  background: #3a4555;
+  border-radius: 2px 2px 0 0;
+  transition: all 0.3s ease;
+}
+
+/* Footer */
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 50px;
+  background: rgba(0, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.footer-left {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.sap-badge {
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  background: #0076be;
+  padding: 5px 15px;
+  border-radius: 2px;
+}
+
+.powered-by {
+  font-size: 10px;
+  color: #5a6a7a;
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.footer-right {
+  font-size: 10px;
+  color: #5a6a7a;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 1600px) {
+  .main-container {
+    grid-template-columns: 350px 1fr 350px;
+  }
+  
+  .timeline-center {
+    width: 300px;
+  }
+}
+
+@media (max-width: 1200px) {
+  .main-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .bottom-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .timeline-section {
+    grid-template-columns: 1fr;
+  }
+}
