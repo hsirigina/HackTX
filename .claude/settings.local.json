@@ -14,6 +14,12 @@
       "Bash(python3:*)",
       "Bash(python:*)",
       "Bash(pip install:*)"
+      "Bash(pip install:*)",
+      "Bash(git checkout frontend/src/AgentDashboard.jsx frontend/src/AgentDashboard.css)",
+      "Bash(python3.12 --version)",
+      "Bash(python3.12 -m venv venv)",
+      "Bash(pip install -r requirements.txt)",
+      "Bash(python gesture_server.py)"
     ],
     "deny": [],
     "ask": []
