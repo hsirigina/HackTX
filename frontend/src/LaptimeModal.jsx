@@ -119,27 +119,11 @@ function LaptimeModal({ isOpen, onClose, laptimeData }) {
               </div>
             </div>
 
-            {/* Sector Breakdown */}
-            <div className="sector-breakdown-section">
-              <div className="section-title">SECTOR BREAKDOWN</div>
-              <div className="sector-bars">
-                {mockData.sectors.map((sector, idx) => (
-                  <div key={idx} className="sector-item">
-                    <div className="sector-header">
-                      <span className="sector-name">{sector.name}</span>
-                      <span className="sector-time">{sector.time}s</span>
-                    </div>
-                    <div className="sector-bar-track">
-                      <div
-                        className="sector-bar-fill"
-                        style={{
-                          width: animateBars ? `${sector.percent}%` : '0%',
-                          background: sector.color
-                        }}
-                      />
-                    </div>
-                  </div>
-                ))}
+            {/* Circuit Map */}
+            <div className="circuit-map-section">
+              <div className="section-title">CIRCUIT MAP</div>
+              <div className="circuit-image-container">
+                <img src="/track1.png" alt="Circuit Map" className="circuit-image" />
               </div>
             </div>
 

@@ -1943,7 +1943,7 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) translateX(-100px);
+  transform: translate(-50%, -50%) translateX(0);
   z-index: 10;
   animation: carLaneChange 3s ease-in-out infinite;
 }
