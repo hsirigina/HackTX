@@ -166,6 +166,7 @@ class TireDataAgent:
 
     def _predict_cliff_lap(self, compound: str, track_temp: float) -> Optional[int]:
         """Predict when tire will hit cliff (degradation > 3.0s)"""
+        # Returns tire age when cliff occurs, NOT race lap number
         return self.tire_model.predict_tire_cliff(compound, threshold=3.0)
 
     def get_status_summary(self) -> Dict:
@@ -185,11 +186,18 @@ class TireDataAgent:
         else:
             trend = 0
 
+        # Get predicted cliff tire age
+        predicted_cliff_age = self._predict_cliff_lap(latest['compound'], 30.0)
+
+        # Calculate laps remaining until cliff (not absolute lap number)
+        laps_until_cliff = predicted_cliff_age - latest['age'] if predicted_cliff_age else None
+
         return {
             'current_compound': latest['compound'],
             'tire_age': latest['age'],
             'degradation_trend_5_laps': round(trend, 2),
-            'predicted_cliff': self._predict_cliff_lap(latest['compound'], 30.0)
+            'predicted_cliff_age': predicted_cliff_age,  # Tire age when cliff occurs
+            'laps_until_cliff': laps_until_cliff  # How many more laps until cliff
         }
 
 
@@ -298,9 +306,14 @@ class LapTimeAgent:
         recent_5 = [lt['time'] for lt in self.lap_times[-5:]]
         all_times = [lt['time'] for lt in self.lap_times]
 
+        # Calculate pace trend (positive = getting slower, negative = getting faster)
+        pace_trend = round(recent_5[-1] - recent_5[0], 3) if len(recent_5) >= 2 else 0
+
         return {
+            'current_pace': round(self.lap_times[-1]['time'], 3),  # Latest lap time
             'avg_lap_time': round(statistics.mean(all_times), 2),
             'avg_last_5_laps': round(statistics.mean(recent_5), 2),
+            'pace_trend': pace_trend,  # How much slower/faster over last 5 laps
             'best_lap': round(min(all_times), 2),
             'worst_lap': round(max(all_times), 2),
             'trend': 'degrading' if recent_5[-1] > recent_5[0] else 'stable'
@@ -347,7 +360,7 @@ class PositionAgent:
         })
 
         # CRITICAL: Position change
-        if self.last_position and position != self.last_position:
+        if self.last_position and position and position != self.last_position:
             change = self.last_position - position  # Positive = gained positions
 
             events.append(TriggerEvent(
@@ -364,7 +377,7 @@ class PositionAgent:
 
         # HIGH: Top 3 racing with close gaps
         if position and position <= 3:
-            if gap_ahead < 2.0 or gap_behind < 2.0:
+            if (gap_ahead is not None and gap_ahead < 2.0) or (gap_behind is not None and gap_behind < 2.0):
                 laps_since = current_lap - self.last_ai_call_lap
                 if laps_since >= 5:  # Don't spam for top 3
                     events.append(TriggerEvent(
@@ -373,8 +386,8 @@ class PositionAgent:
                         call_ai=True,
                         data={
                             'position': position,
-                            'gap_ahead': round(gap_ahead, 2),
-                            'gap_behind': round(gap_behind, 2),
+                            'gap_ahead': round(gap_ahead, 2) if gap_ahead is not None else None,
+                            'gap_behind': round(gap_behind, 2) if gap_behind is not None else None,
                             'message': f"Close racing: P{position} with gaps <2s (ahead: {gap_ahead:.1f}s, behind: {gap_behind:.1f}s)"
                         }
                     ))
@@ -382,7 +395,7 @@ class PositionAgent:
         # HIGH: Gap closing rapidly
         if len(self.position_history) >= 3:
             prev_gap_ahead = self.position_history[-3]['gap_ahead']
-            if prev_gap_ahead < 999 and gap_ahead < 999:
+            if prev_gap_ahead is not None and prev_gap_ahead < 999 and gap_ahead is not None and gap_ahead < 999:
                 gap_change = prev_gap_ahead - gap_ahead  # Positive = closing
 
                 if gap_change > 1.0:  # Closed 1+ seconds in 2 laps
@@ -404,8 +417,8 @@ class PositionAgent:
             call_ai=False,
             data={
                 'position': position,
-                'gap_ahead': round(gap_ahead, 2) if gap_ahead < 999 else None,
-                'gap_behind': round(gap_behind, 2) if gap_behind < 999 else None
+                'gap_ahead': round(gap_ahead, 2) if gap_ahead is not None and gap_ahead < 999 else None,
+                'gap_behind': round(gap_behind, 2) if gap_behind is not None and gap_behind < 999 else None
             }
         ))
 
@@ -432,8 +445,8 @@ class PositionAgent:
 
         return {
             'current_position': latest['position'],
-            'gap_ahead': round(latest['gap_ahead'], 2) if latest['gap_ahead'] < 999 else None,
-            'gap_behind': round(latest['gap_behind'], 2) if latest['gap_behind'] < 999 else None,
+            'gap_ahead': round(latest['gap_ahead'], 2) if latest['gap_ahead'] is not None and latest['gap_ahead'] < 999 else None,
+            'gap_behind': round(latest['gap_behind'], 2) if latest['gap_behind'] is not None and latest['gap_behind'] < 999 else None,
             'trend': trend
         }
 
@@ -475,6 +488,10 @@ class CompetitorAgent:
         our_position = our_data.get('position')
         our_lap_time = our_data.get('lap_time')
         our_tire_age = our_data.get('tire_age', 0)
+
+        # Return early if we don't have valid position data
+        if our_position is None:
+            return events
 
         # Define "nearby" as P±2
         nearby_range = range(
@@ -566,6 +583,14 @@ class CompetitorAgent:
 
     def get_status_summary(self, our_position: int) -> Dict:
         """Return competitor analysis for AI context"""
+        # Handle None position
+        if our_position is None:
+            return {
+                'nearby_competitors': [],
+                'threats': [],
+                'opportunities': []
+            }
+
         nearby_range = range(max(1, our_position - 2), min(21, our_position + 3))
 
         nearby_competitors = []
@@ -583,10 +608,32 @@ class CompetitorAgent:
         # Sort by position
         nearby_competitors.sort(key=lambda x: x['position'])
 
+        # Identify threats (cars behind on fresher tires or faster pace)
+        threats = []
+        for c in nearby_competitors:
+            if c['position'] > our_position:  # Car behind us
+                if c['tire_age'] < 10:
+                    threats.append({
+                        'driver': c['name'],
+                        'position': c['position'],
+                        'message': f"Fresh tires ({c['tire_age']} laps old) - {c['compound']}"
+                    })
+
+        # Identify opportunities (cars ahead on older tires or slower pace)
+        opportunities = []
+        for c in nearby_competitors:
+            if c['position'] < our_position:  # Car ahead of us
+                if c['tire_age'] > 30:
+                    opportunities.append({
+                        'driver': c['name'],
+                        'position': c['position'],
+                        'message': f"Old tires ({c['tire_age']} laps) - {c['compound']}"
+                    })
+
         return {
             'nearby_competitors': nearby_competitors,
-            'threats': [c for c in nearby_competitors if c['position'] > our_position and c['tire_age'] < 10],
-            'opportunities': [c for c in nearby_competitors if c['position'] < our_position and c['tire_age'] > 20]
+            'threats': threats,
+            'opportunities': opportunities
         }
 
 

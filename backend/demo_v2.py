@@ -22,8 +22,7 @@ def run_replay(replay: RaceReplay, start_lap: int, end_lap: int, focused_driver:
     replay.replay(
         start_lap=start_lap,
         end_lap=end_lap,
-        focused_driver=focused_driver,
-        delay_between_laps=3.0  # 3 seconds per lap for demo
+        focused_driver=focused_driver
     )
     print("\n✅ Replay complete!")
 
@@ -76,10 +75,17 @@ def main():
     # Initialize race replay
     print("\n🔧 Initializing race replay system...")
     replay = RaceReplay(
-        year=YEAR,
-        race_name=RACE_NAME,
-        race_id=RACE_ID
+        race_id=RACE_ID,
+        supabase_url=supabase_url,
+        supabase_key=supabase_key,
+        laps_per_second=1/3  # 1 lap every 3 seconds
     )
+
+    # Load Monaco 2024 race data
+    replay.load_race(year=YEAR, race_name=RACE_NAME)
+
+    # Clear old race data from Supabase
+    replay.clear_race_data()
 
     # Initialize race monitor V2
     print("🔧 Initializing race monitor V2 (event-based triggering)...")
