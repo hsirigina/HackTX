@@ -347,10 +347,10 @@
   background: rgba(25, 35, 50, 0.6);
   border: 1px solid rgba(0, 191, 255, 0.2);
   border-radius: 8px;
-  padding: 20px 30px;
+  padding: 15px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 12px;
   position: relative;
   overflow: hidden;
   animation: glow 3s ease-in-out infinite;
@@ -423,7 +423,7 @@
 
 .lap-display {
   text-align: center;
-  padding: 20px;
+  padding: 12px;
   background: rgba(0, 0, 0, 0.5);
   border-radius: 4px;
   border: 1px solid rgba(0, 191, 255, 0.3);
@@ -452,7 +452,7 @@
 }
 
 .lap-number {
-  font-size: 64px;
+  font-size: 52px;
   font-weight: 900;
   color: #fff;
   line-height: 1;
@@ -464,7 +464,7 @@
 }
 
 .lap-number span {
-  font-size: 32px;
+  font-size: 26px;
   color: #5a6a7a;
   text-shadow: none;
 }
@@ -475,7 +475,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 10px;
   user-select: none;
   overflow: visible;
 }
@@ -574,7 +574,7 @@
 .recommendation-box {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
-  padding: 20px;
+  padding: 14px;
   border: 1px solid rgba(255, 255, 255, 0.05);
   min-width: 100%;
   max-width: 100%;
@@ -589,8 +589,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 15px;
-  padding-bottom: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
@@ -654,10 +654,10 @@
 }
 
 .rec-type {
-  font-size: 28px;
+  font-size: 26px;
   font-weight: 900;
   color: #00bfff;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
   animation: fadeIn 0.5s ease;
@@ -667,7 +667,7 @@
   font-size: 16px;
   color: #fff;
   font-weight: 600;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   line-height: 1.4;
 }
 
@@ -675,13 +675,13 @@
   font-size: 13px;
   color: #8899aa;
   line-height: 1.5;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
 }
 
 .rec-meta {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 6px;
   margin-top: auto;
 }
 

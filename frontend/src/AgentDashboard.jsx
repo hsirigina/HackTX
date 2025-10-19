@@ -1,15 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
 import TireModal from './TireModal'
 import LaptimeModal from './LaptimeModal'
 import PositionModal from './PositionModal'
+import McLarenDashboard from './McLarenDashboard'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'race-session-' + Date.now()
 
 function AgentDashboard() {
-  const navigate = useNavigate()
   const [scenarios, setScenarios] = useState([])
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0)
   const [currentLap, setCurrentLap] = useState(1)
@@ -35,6 +34,7 @@ function AgentDashboard() {
   const [isTireModalOpen, setIsTireModalOpen] = useState(false)
   const [isLaptimeModalOpen, setIsLaptimeModalOpen] = useState(false)
   const [isPositionModalOpen, setIsPositionModalOpen] = useState(false)
+  const [isCompetitorModalOpen, setIsCompetitorModalOpen] = useState(false)
 
   // Race selection state
   const [showSelection, setShowSelection] = useState(true)
@@ -1174,14 +1174,7 @@ function AgentDashboard() {
           {/* Competitor Agent */}
           <div 
             className="agent-card" 
-            onClick={() => navigate('/monitor', { 
-              state: { 
-                selectedRace: { id: 'bahrain', name: 'Bahrain Grand Prix', laps: 57 },
-                selectedDriver: 'VER',
-                currentLap: currentLap,
-                raceState: raceState
-              } 
-            })} 
+            onClick={() => setIsCompetitorModalOpen(true)} 
             style={{cursor: 'pointer'}}
           >
             <div className="agent-header">
@@ -1266,6 +1259,18 @@ function AgentDashboard() {
           gap_behind: insights?.position?.gap_behind
         }}
         currentLap={currentLap}
+      />
+
+      {/* Competitor Modal */}
+      <McLarenDashboard
+        isOpen={isCompetitorModalOpen}
+        onClose={() => setIsCompetitorModalOpen(false)}
+        raceConfig={{
+          selectedRace: selectedRace,
+          selectedDriver: selectedDriver,
+          currentLap: currentLap,
+          raceState: raceState
+        }}
       />
 
       {/* Race Complete Modal */}

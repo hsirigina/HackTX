@@ -1088,3 +1088,308 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Modal overlay - matches other modals */
+.mclaren-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.mclaren-modal-overlay.active {
+  opacity: 1;
+}
+
+/* Modal container - matches other modals */
+.mclaren-modal-container {
+  background: linear-gradient(135deg, rgba(25, 35, 55, 0.98), rgba(15, 20, 35, 0.98));
+  border: 2px solid rgba(0, 191, 255, 0.4);
+  border-radius: 0;
+  width: 90%;
+  max-width: 1400px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 
+    0 0 40px rgba(0, 191, 255, 0.3),
+    inset 0 0 100px rgba(0, 191, 255, 0.05);
+  position: relative;
+  transform: scale(0.9) translateY(20px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.mclaren-modal-container.active {
+  transform: scale(1) translateY(0);
+  opacity: 1;
+}
+
+/* Modal header - matches other modals */
+.mclaren-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background: rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(0, 191, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.mclaren-modal-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00bfff;
+  letter-spacing: 3px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.competitor-icon img {
+  width: 32px;
+  height: 32px;
+  filter: drop-shadow(0 0 10px rgba(0, 191, 255, 0.5));
+}
+
+.mclaren-close-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 0;
+  background: rgba(0, 191, 255, 0.1);
+  border: 2px solid rgba(0, 191, 255, 0.4);
+  color: #00bfff;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 300;
+}
+
+.mclaren-close-btn:hover {
+  background: rgba(0, 191, 255, 0.2);
+  border-color: #00bfff;
+  box-shadow: 0 0 20px rgba(0, 191, 255, 0.4);
+}
+
+/* Modal-specific overrides for compact view */
+.mclaren-modal-container .mclaren-dashboard {
+  min-height: auto !important;
+  height: 100% !important;
+  width: auto !important;
+  position: relative !important;
+  background: transparent !important;
+  border: none !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  flex: 1;
+}
+
+.mclaren-modal-container .main-container {
+  grid-template-columns: 320px 1fr 320px;
+  gap: 15px;
+  padding: 15px 20px;
+  min-height: 300px;
+}
+
+.mclaren-modal-container .driver-column {
+  padding: 12px 15px;
+}
+
+.mclaren-modal-container .position-huge {
+  font-size: 80px;
+}
+
+.mclaren-modal-container .driver-name-left h2,
+.mclaren-modal-container .driver-name-right h2 {
+  font-size: 14px;
+}
+
+.mclaren-modal-container .car-display {
+  min-height: 100px;
+  margin: 10px 0;
+}
+
+.mclaren-modal-container .car-display img {
+  max-width: 120px;
+}
+
+.mclaren-modal-container .speed-big {
+  font-size: 32px;
+}
+
+.mclaren-modal-container .engine-number {
+  font-size: 32px;
+}
+
+.mclaren-modal-container .engine-number sub {
+  font-size: 18px;
+}
+
+.mclaren-modal-container .center-column {
+  padding: 15px 20px;
+}
+
+.mclaren-modal-container .temperature {
+  font-size: 36px;
+}
+
+.mclaren-modal-container .temperature span {
+  font-size: 18px;
+}
+
+.mclaren-modal-container .telemetry-chart {
+  padding: 10px;
+  margin-top: 15px;
+}
+
+.mclaren-modal-container .section-grid {
+  gap: 12px;
+}
+
+.mclaren-modal-container .tire-section,
+.mclaren-modal-container .pit-window-section,
+.mclaren-modal-container .raw-telemetry,
+.mclaren-modal-container .speed-box,
+.mclaren-modal-container .engine-box {
+  padding: 10px;
+  margin: 10px 0;
+}
+
+.mclaren-modal-container .window-laps {
+  font-size: 24px;
+  padding: 8px;
+  margin-bottom: 8px;
+}
+
+.mclaren-modal-container .tire-circle {
+  width: 45px;
+  height: 45px;
+}
+
+.mclaren-modal-container .tire-laps {
+  font-size: 18px;
+}
+
+.mclaren-modal-container .gauge-ring {
+  width: 30px;
+  height: 30px;
+}
+
+.mclaren-modal-container .detail-bars {
+  width: 120px;
+  height: 6px;
+}
+
+.mclaren-modal-container .timeline-section {
+  grid-template-columns: 1fr auto 1fr;
+  gap: 20px;
+  padding: 20px 30px;
+}
+
+.mclaren-modal-container .timeline-center {
+  width: 250px;
+}
+
+.mclaren-modal-container .kamm-bars {
+  height: 40px;
+}
+
+.mclaren-modal-container .fuel-section {
+  padding: 8px;
+  margin: 10px 0;
+}
+
+.mclaren-modal-container .telemetry-row {
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.mclaren-modal-container .telem-box {
+  padding: 8px;
+}
+
+.mclaren-modal-container .driver-stats {
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.mclaren-modal-container .driver-name-section {
+  margin-bottom: 12px;
+}
+
+.mclaren-modal-container .safety-status,
+.mclaren-modal-container .zone-text {
+  margin: 10px 0;
+}
+
+/* Custom scrollbar for modal */
+.mclaren-modal-container .mclaren-dashboard::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.mclaren-modal-container .mclaren-dashboard::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 5px;
+}
+
+.mclaren-modal-container .mclaren-dashboard::-webkit-scrollbar-thumb {
+  background: rgba(0, 191, 255, 0.5);
+  border-radius: 5px;
+}
+
+.mclaren-modal-container .mclaren-dashboard::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 191, 255, 0.7);
+}
+
+/* Additional font size reductions */
+.mclaren-modal-container .stat-value {
+  font-size: 11px;
+}
+
+.mclaren-modal-container .telem-value {
+  font-size: 14px;
+}
+
+.mclaren-modal-container .driver-badge {
+  padding: 3px 10px;
+  font-size: 14px;
+}
+
+.mclaren-modal-container .driver-delta {
+  font-size: 12px;
+}
+
+.mclaren-modal-container .fuel-icon {
+  font-size: 20px;
+}
+
+.mclaren-modal-container .fuel-lap {
+  font-size: 10px;
+}
+
+.mclaren-modal-container .fuel-bar-container {
+  height: 16px;
+}
+
+.mclaren-modal-container .stat-val {
+  font-size: 12px;
+}
+
+.mclaren-modal-container .pace-row {
+  font-size: 10px;
+}

@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
 import './McLarenDashboard.css'
 
@@ -8,10 +7,8 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrY2RiYm1lbG9udm1kdXhra2dlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjA3NzM2NjMsImV4cCI6MjA3NjM0OTY2M30.UADl4E7idotTLC-OSEv_kbCslpRDykhehe-E9at1Vkk'
 )
 
-function McLarenDashboard() {
-  const location = useLocation()
-  const navigate = useNavigate()
-  const raceConfig = location.state || {}
+function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
+  if (!isOpen) return null
 
   const [userData, setUserData] = useState(null)
   const [competitorData, setCompetitorData] = useState(null)
@@ -229,43 +226,39 @@ function McLarenDashboard() {
   const trackSvgPath = trackMap[currentTrack]
   const trackName = trackNames[currentTrack] || 'AUTODROMO DI MONZA'
 
-  return (
-    <div className="mclaren-dashboard">
-      {/* Back Button */}
-      <button 
-        onClick={() => navigate('/livesim', { replace: true })}
-        style={{
-          position: 'absolute',
-          top: '20px',
-          right: '20px',
-          width: '40px',
-          height: '40px',
-          borderRadius: '50%',
-          backgroundColor: 'rgba(0, 191, 255, 0.2)',
-          border: '2px solid #00bfff',
-          color: '#00bfff',
-          fontSize: '24px',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000,
-          transition: 'all 0.3s ease'
-        }}
-        onMouseEnter={(e) => {
-          e.target.style.backgroundColor = 'rgba(0, 191, 255, 0.4)'
-          e.target.style.transform = 'scale(1.1)'
-        }}
-        onMouseLeave={(e) => {
-          e.target.style.backgroundColor = 'rgba(0, 191, 255, 0.2)'
-          e.target.style.transform = 'scale(1)'
-        }}
-      >
-        ✕
-      </button>
+  const [animateIn, setAnimateIn] = useState(false)
 
-      {/* Main Container */}
-      <div className="main-container">
+  useEffect(() => {
+    if (isOpen) {
+      setAnimateIn(true)
+    }
+  }, [isOpen])
+
+  const handleClose = () => {
+    setAnimateIn(false)
+    setTimeout(onClose, 300)
+  }
+
+  return (
+    <div 
+      className={`mclaren-modal-overlay ${animateIn ? 'active' : ''}`}
+      onClick={handleClose}
+    >
+      <div 
+        className={`mclaren-dashboard mclaren-modal-container ${animateIn ? 'active' : ''}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div className="mclaren-modal-header">
+          <div className="mclaren-modal-title">
+            <span className="competitor-icon"><img src="/trackagent.png" alt="Competitor Agent" /></span>
+            COMPETITOR ANALYSIS
+          </div>
+          <button className="mclaren-close-btn" onClick={handleClose}>✕</button>
+        </div>
+
+        {/* Main Container */}
+        <div className="main-container">
         {/* Left Driver Section - YOU */}
         <div className="driver-column left-driver">
           <div className="driver-info-header">
@@ -638,6 +631,7 @@ function McLarenDashboard() {
             </div>
           </div>
         </div>
+      </div>
       </div>
     </div>
   )
