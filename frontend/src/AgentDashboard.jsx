@@ -1,129 +1,170 @@
 import { useState, useEffect } from 'react'
-import { supabase } from './supabaseClient'
 import './AgentDashboard.css'
 
+const API_BASE_URL = 'http://localhost:8000'
+const SESSION_ID = 'race-session-' + Date.now()
+
 function AgentDashboard() {
-  const [agentStatus, setAgentStatus] = useState(null)
-  const [recommendation, setRecommendation] = useState(null)
   const [scenarios, setScenarios] = useState([])
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0)
-  const [currentLap, setCurrentLap] = useState(null)
+  const [currentLap, setCurrentLap] = useState(1)
   const [events, setEvents] = useState([])
   const [apiCalls, setApiCalls] = useState(0)
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
   const [isSliding, setIsSliding] = useState(false)
-  const [lastGestureTime, setLastGestureTime] = useState(0)
+  const [raceState, setRaceState] = useState({
+    position: 3,
+    tireCompound: 'SOFT',
+    tireAge: 0,
+    drivingStyle: 'BALANCED',
+    totalRaceTime: 0,
+    pitStops: 0
+  })
+  const [loading, setLoading] = useState(true)
+  const [raceFinished, setRaceFinished] = useState(false)
+  const [finalResults, setFinalResults] = useState(null)
 
-  // Poll Supabase for agent status
+  // Start race and fetch backend data
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        // Get latest agent status
-        const { data: statusData, error: statusError } = await supabase
-          .from('agent_status')
-          .select('*')
-          .order('lap_number', { ascending: false })
-          .limit(1)
-
-        if (statusError) throw statusError
-
-        if (statusData && statusData.length > 0) {
-          const status = statusData[0]
-          setAgentStatus(status)
-          setCurrentLap(status.lap_number)
-        }
-
-        // Get latest recommendation
-        const { data: recData, error: recError } = await supabase
-          .from('agent_recommendations')
-          .select('*')
-          .order('lap_number', { ascending: false })
-          .limit(1)
-
-        if (recError) throw recError
-
-        if (recData && recData.length > 0) {
-          const rec = recData[0]
-          setRecommendation(rec)
-        }
-
-        // Get all scenarios (recommendations)
-        const { data: scenariosData, error: scenariosError } = await supabase
-          .from('agent_recommendations')
-          .select('*')
-          .order('lap_number', { ascending: false })
-          .limit(20)
-
-        if (!scenariosError && scenariosData) {
-          setScenarios(scenariosData)
-          setEvents(scenariosData.slice(0, 5))
-        }
-
-        // Count API calls (recommendations = AI calls)
-        const { count } = await supabase
-          .from('agent_recommendations')
-          .select('*', { count: 'exact', head: true })
-
-        setApiCalls(count || 0)
-
-      } catch (error) {
-        console.error('Error fetching data:', error)
-      }
-    }
-
-    fetchData()
-    const interval = setInterval(fetchData, 2000)
-    return () => clearInterval(interval)
+    startRace()
   }, [])
 
-  // Parse agent insights from database fields
-  const parseInsights = (statusData) => {
-    if (!statusData) return { tire: {}, laptime: {}, position: {}, competitor: {} }
-    
+  const startRace = async () => {
+    setLoading(true)
     try {
-      return {
-        tire: {
-          compound: statusData.tire_compound || 'UNKNOWN',
-          tire_age: statusData.tire_age || 0,
-          degradation: statusData.tire_degradation_trend || '+0.0',
-          status: 'active',
-          triggers: statusData.tire_age > 20 ? [
-            { message: `Old tires (${statusData.tire_age} laps)`, urgency: 'HIGH' }
-          ] : []
+      const response = await fetch(`${API_BASE_URL}/api/race/start`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        laptime: {
-          current_time: statusData.current_pace?.toFixed(3) || '0.000',
-          avg_time: statusData.avg_lap_time?.toFixed(3) || '0.000',
-          trend: statusData.pace_trend || 'STABLE',
-          status: 'active',
-          triggers: statusData.pace_trend === 'DEGRADING' ? [
-            { message: 'Pace degrading', urgency: 'MEDIUM' }
-          ] : []
-        },
-        position: {
-          position: statusData.current_position || 1,
-          gap_ahead: statusData.gap_ahead?.toFixed(1) || '+0.0',
-          gap_behind: statusData.gap_behind?.toFixed(1) || '+0.0',
-          status: 'active',
-          triggers: []
-        },
-        competitor: {
-          threats: Array.isArray(statusData.nearby_threats) ? statusData.nearby_threats.length : 0,
-          pit_status: 'MONITORING',
-          status: 'active',
-          triggers: statusData.nearby_threats?.length > 0 ? [
-            { message: `${statusData.nearby_threats.length} threats detected`, urgency: 'HIGH' }
-          ] : []
-        }
-      }
-    } catch (e) {
-      console.error('Error parsing insights:', e)
-      return { tire: {}, laptime: {}, position: {}, competitor: {} }
+        body: JSON.stringify({
+          session_id: SESSION_ID,
+          race_year: 2024,
+          race_name: 'Bahrain',
+          total_laps: 57,
+          starting_position: 3,
+          starting_compound: 'SOFT'
+        })
+      })
+
+      const data = await response.json()
+      console.log('Race started:', data)
+
+      setCurrentLap(data.currentLap)
+      setScenarios(data.strategies)
+      setRaceState(data.state)
+      setApiCalls(1)
+
+      // Add initial event
+      setEvents([{
+        lap_number: data.currentLap,
+        recommendation_type: 'RACE START',
+        reasoning: `Starting from P${data.state.position} on ${data.state.tireCompound} tires`
+      }])
+
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to start race:', error)
+      alert('Failed to connect to backend API. Make sure the backend is running on port 8000. Error: ' + error.message)
+      setLoading(false)
     }
   }
 
-  const insights = parseInsights(agentStatus)
+  // Parse agent insights from race state
+  const parseInsights = () => {
+    const avgLapTime = raceState.totalRaceTime / Math.max(currentLap, 1)
+
+    return {
+      tire: {
+        compound: raceState.tireCompound || 'SOFT',
+        tire_age: raceState.tireAge || 0,
+        degradation: '+0.0',
+        status: 'active',
+        triggers: raceState.tireAge > 20 ? [
+          { message: `High tire wear (${raceState.tireAge} laps)`, urgency: 'HIGH' }
+        ] : raceState.tireAge > 15 ? [
+          { message: `Tire degradation increasing`, urgency: 'MEDIUM' }
+        ] : []
+      },
+      laptime: {
+        current_time: avgLapTime.toFixed(3),
+        avg_time: avgLapTime.toFixed(3),
+        trend: raceState.drivingStyle,
+        status: 'active',
+        triggers: []
+      },
+      position: {
+        position: raceState.position || 3,
+        gap_ahead: '+0.5',
+        gap_behind: '-1.2',
+        status: 'active',
+        triggers: []
+      },
+      competitor: {
+        threats: 0,
+        pit_status: raceState.pitStops > 0 ? `${raceState.pitStops} STOPS` : 'NO STOPS',
+        status: 'active',
+        triggers: []
+      }
+    }
+  }
+
+  const insights = parseInsights()
+
+  // Handle strategy selection and progress race
+  const handleScenarioSelect = async (scenario) => {
+    if (loading) return
+
+    try {
+      setLoading(true)
+      const response = await fetch(`${API_BASE_URL}/api/race/decision`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          session_id: SESSION_ID,
+          option_id: scenario.id
+        })
+      })
+
+      const data = await response.json()
+      console.log('Decision result:', data)
+
+      setApiCalls(apiCalls + 1)
+
+      // Add event to timeline
+      setEvents(prev => [{
+        lap_number: currentLap,
+        recommendation_type: scenario.title,
+        reasoning: scenario.description
+      }, ...prev.slice(0, 4)])
+
+      // Update race state
+      if (data.raceFinished) {
+        setRaceFinished(true)
+        setCurrentLap(57)
+        setScenarios([])
+        setFinalResults(data.finalResults)
+        setEvents(prev => [{
+          lap_number: 57,
+          recommendation_type: 'RACE FINISHED',
+          reasoning: 'Race completed!'
+        }, ...prev])
+      } else {
+        setCurrentLap(data.currentLap)
+        setScenarios(data.strategies)
+        setRaceState(data.state)
+        setCurrentScenarioIndex(0)
+      }
+
+      setLoading(false)
+    } catch (error) {
+      console.error('Failed to make decision:', error)
+      setLoading(false)
+    }
+  }
 
   // Swipe handlers
   const handleTouchStart = (e) => {
@@ -136,7 +177,7 @@ function AgentDashboard() {
 
   const handleTouchEnd = () => {
     if (!touchStart || !touchEnd) return
-    
+
     const distance = touchStart - touchEnd
     const isLeftSwipe = distance > 50
     const isRightSwipe = distance < -50
@@ -172,36 +213,17 @@ function AgentDashboard() {
     }
   }
 
-  // Poll gesture server for hand gestures
-  useEffect(() => {
-    const pollGestures = async () => {
-      try {
-        const response = await fetch('http://localhost:5001/api/gesture')
-        const data = await response.json()
-        
-        // Only process if it's a new gesture (different timestamp)
-        if (data.timestamp > lastGestureTime && data.gesture !== 'No Gesture') {
-          setLastGestureTime(data.timestamp)
-          
-          // Handle gestures
-          if (data.gesture === 'Swipe Left' && currentScenarioIndex < scenarios.length - 1) {
-            console.log('👈 Gesture detected: Swipe Left - Going to next scenario')
-            goToNextScenario()
-          } else if (data.gesture === 'Swipe Right' && currentScenarioIndex > 0) {
-            console.log('👉 Gesture detected: Swipe Right - Going to previous scenario')
-            goToPrevScenario()
-          }
-        }
-      } catch (error) {
-        // Gesture server not running, silently ignore
-      }
-    }
-
-    const gestureInterval = setInterval(pollGestures, 200) // Poll 5 times per second
-    return () => clearInterval(gestureInterval)
-  }, [currentScenarioIndex, scenarios.length, lastGestureTime, goToNextScenario, goToPrevScenario])
-
-  const currentScenario = scenarios[currentScenarioIndex] || recommendation
+  if (loading) {
+    return (
+      <div className="agent-dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', color: 'white' }}>
+          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🏎️</div>
+          <div style={{ fontSize: '24px', marginBottom: '10px' }}>Loading Race Data...</div>
+          <div style={{ fontSize: '14px', color: '#667788' }}>Connecting to backend on port 8000...</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="agent-dashboard">
@@ -301,90 +323,174 @@ function AgentDashboard() {
 
           <div className="lap-display">
             <div className="lap-label">CURRENT LAP</div>
-            <div className="lap-number">{currentLap || '--'}<span>/78</span></div>
+            <div className="lap-number">{currentLap || '--'}<span>/57</span></div>
           </div>
 
-          {/* Swipable Scenario Carousel */}
-          <div className="scenario-carousel"
-               onTouchStart={handleTouchStart}
-               onTouchMove={handleTouchMove}
-               onTouchEnd={handleTouchEnd}>
-            
-            {/* Navigation Arrows */}
-            <button 
-              className="carousel-arrow left" 
-              onClick={goToPrevScenario}
-              disabled={currentScenarioIndex === 0}
-              aria-label="Previous scenario">
-              ←
-            </button>
-            <button 
-              className="carousel-arrow right" 
-              onClick={goToNextScenario}
-              disabled={currentScenarioIndex === scenarios.length - 1}
-              aria-label="Next scenario">
-              →
-            </button>
+          {/* Swipable Scenario Carousel OR Final Results */}
+          {raceFinished ? (
+            <div className="final-results-container">
+              <div className="results-header">
+                <div className="results-icon">🏁</div>
+                <div className="results-title">RACE FINISHED!</div>
+              </div>
 
-            <div className="carousel-track">
-              {scenarios.length > 0 ? (
-                <div 
-                  className="carousel-inner"
-                  style={{
-                    transform: `translateX(-${currentScenarioIndex * 100}%)`,
-                    transition: isSliding ? 'transform 0.4s ease-in-out' : 'none'
-                  }}
-                >
-                  {scenarios.map((scenario, index) => (
-                    <div key={index} className="recommendation-box">
-                      <div className="rec-header">
-                        <span className="rec-label">
-                          SCENARIO {index + 1}/{scenarios.length}
-                        </span>
-                        <span className={`rec-urgency ${scenario?.urgency?.toLowerCase() || 'low'}`}>
-                          {scenario?.urgency || 'LOW'}
-                        </span>
+              {finalResults && (
+                <>
+                  <div className="race-performance-section">
+                    <div className="section-header">🏆 YOUR RACE PERFORMANCE</div>
+                    <div className="performance-grid">
+                      <div className="perf-stat">
+                        <span className="perf-label">Your time:</span>
+                        <span className="perf-value">{finalResults.user_time.toFixed(1)}s</span>
                       </div>
-
-                      <div className="rec-type">{scenario.recommendation_type || 'ANALYZING'}</div>
-                      <div className="rec-message">Lap {scenario.lap_number} Strategy Update</div>
-                      <div className="rec-reasoning">{scenario.reasoning || 'Analyzing race conditions...'}</div>
-                      
-                      <div className="rec-meta">
-                        <div className="rec-confidence">
-                          <span>Confidence:</span>
-                          <div className="confidence-bar">
-                            <div 
-                              className="confidence-fill" 
-                              style={{width: `${(scenario.confidence_score || 0.5) * 100}%`}}
-                            ></div>
-                          </div>
-                          <span>{Math.round((scenario.confidence_score || 0.5) * 100)}%</span>
-                        </div>
+                      <div className="perf-stat">
+                        <span className="perf-label">Winner's time:</span>
+                        <span className="perf-value">{finalResults.full_leaderboard[0].time.toFixed(1)}s</span>
+                      </div>
+                      <div className="perf-stat">
+                        <span className="perf-label">Gap to winner:</span>
+                        <span className="perf-value highlight">+{finalResults.gap_to_winner.toFixed(1)}s</span>
+                      </div>
+                      <div className="perf-stat">
+                        <span className="perf-label">Final position:</span>
+                        <span className="perf-value highlight">P{finalResults.leaderboard_position} / {finalResults.total_drivers}</span>
                       </div>
                     </div>
+                  </div>
+
+                  <div className="leaderboard-section">
+                    <div className="section-header">📊 LEADERBOARD (Your Position)</div>
+                    <div className="leaderboard-grid">
+                      {finalResults.nearby_drivers.map((driver, idx) => (
+                        <div key={idx} className={`leaderboard-row ${driver.driver === 'YOU' ? 'your-position' : ''}`}>
+                          <span className="driver-marker">{driver.driver === 'YOU' ? '👉' : ''}</span>
+                          <span className="driver-code">{driver.driver}</span>
+                          <span className="team-name">{driver.team}</span>
+                          <span className="time">{driver.time.toFixed(1)}s</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="strategy-summary-section">
+                    <div className="section-header">📋 YOUR STRATEGY</div>
+                    <div className="summary-grid">
+                      <div className="summary-stat">
+                        <strong>Pit stops:</strong> {finalResults.pit_stops}
+                      </div>
+                      {finalResults.pit_stop_details.map((pit, idx) => (
+                        <div key={idx} className="pit-detail">
+                          Pit {idx + 1}: Lap {pit.lap} → {pit.compound} tires
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="decision-timeline-section">
+                    <div className="section-header">📋 DECISION TIMELINE</div>
+                    <div className="timeline-grid">
+                      {finalResults.decision_timeline.map((decision, idx) => (
+                        <div key={idx} className="timeline-item">
+                          <span className="lap-num">Lap {decision.lap}:</span>
+                          <span className="decision-text">{decision.title}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          ) : (
+            <div className="scenario-carousel"
+                 onTouchStart={handleTouchStart}
+                 onTouchMove={handleTouchMove}
+                 onTouchEnd={handleTouchEnd}>
+
+              {/* Navigation Arrows */}
+              <button
+                className="carousel-arrow left"
+                onClick={goToPrevScenario}
+                disabled={currentScenarioIndex === 0}
+                aria-label="Previous scenario">
+                ←
+              </button>
+              <button
+                className="carousel-arrow right"
+                onClick={goToNextScenario}
+                disabled={currentScenarioIndex === scenarios.length - 1}
+                aria-label="Next scenario">
+                →
+              </button>
+
+              <div className="carousel-track">
+                {scenarios.length > 0 ? (
+                  <div
+                    className="carousel-inner"
+                    style={{
+                      transform: `translateX(-${currentScenarioIndex * 100}%)`,
+                      transition: isSliding ? 'transform 0.4s ease-in-out' : 'none'
+                    }}
+                  >
+                    {scenarios.map((scenario, index) => (
+                      <div
+                        key={index}
+                        className="recommendation-box"
+                        onClick={() => handleScenarioSelect(scenario)}
+                        style={{ cursor: 'pointer' }}
+                      >
+                        <div className="rec-header">
+                          <span className="rec-label">
+                            {scenario.option}
+                          </span>
+                          <span className={`rec-urgency ${scenario.confidence?.toLowerCase() || 'recommended'}`}>
+                            {scenario.confidence || 'RECOMMENDED'}
+                          </span>
+                        </div>
+
+                        <div className="rec-type">{scenario.title}</div>
+                        <div className="rec-message">{scenario.description}</div>
+                        <div className="rec-reasoning">{scenario.reasoning}</div>
+
+                        <div className="rec-meta">
+                          <div className="rec-metrics">
+                            <div className="metric-item">
+                              <span>Race Impact:</span>
+                              <span>{scenario.raceTimeImpact}</span>
+                            </div>
+                            <div className="metric-item">
+                              <span>Lap Impact:</span>
+                              <span>{scenario.lapTimeImpact}</span>
+                            </div>
+                            <div className="metric-item">
+                              <span>Tire Wear:</span>
+                              <span>{scenario.tireWear}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="recommendation-box">
+                    <div className="rec-empty">Waiting for scenarios...</div>
+                  </div>
+                )}
+              </div>
+
+              {/* Scenario Indicators */}
+              {scenarios.length > 1 && (
+                <div className="scenario-indicators">
+                  {scenarios.map((_, index) => (
+                    <div
+                      key={index}
+                      className={`indicator-dot ${index === currentScenarioIndex ? 'active' : ''}`}
+                      onClick={() => setCurrentScenarioIndex(index)}
+                    />
                   ))}
-                </div>
-              ) : (
-                <div className="recommendation-box">
-                  <div className="rec-empty">Waiting for scenarios...</div>
                 </div>
               )}
             </div>
-
-            {/* Scenario Indicators */}
-            {scenarios.length > 1 && (
-              <div className="scenario-indicators">
-                {scenarios.map((_, index) => (
-                  <div 
-                    key={index}
-                    className={`indicator-dot ${index === currentScenarioIndex ? 'active' : ''}`}
-                    onClick={() => setCurrentScenarioIndex(index)}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          )}
 
           <div className="event-feed">
             <div className="feed-title">RECENT EVENTS</div>
@@ -504,7 +610,7 @@ function AgentDashboard() {
       {/* Footer */}
       <div className="dash-footer">
         <div className="footer-right">
-          <span>RACE: Monaco 2024 • DRIVER: LEC • MODE: Real-time</span>
+          <span>RACE: Bahrain 2024 • POSITION: P{raceState.position} • TIRES: {raceState.tireCompound} ({raceState.tireAge} laps) • STYLE: {raceState.drivingStyle}</span>
         </div>
       </div>
     </div>
@@ -512,4 +618,3 @@ function AgentDashboard() {
 }
 
 export default AgentDashboard
-

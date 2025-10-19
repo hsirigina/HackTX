@@ -1,0 +1,553 @@
+.apex-container {
+  min-height: 100vh;
+  width: 100vw;
+  background: #000000;
+  position: relative;
+  overflow: auto;
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+}
+
+.apex-header {
+  padding: 40px 60px;
+}
+
+.apex-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.apex-title {
+  color: white;
+  font-size: 72px;
+  font-weight: 300;
+  letter-spacing: 0px;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.apex-x {
+  color: #FF4444;
+}
+
+.lap-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.lap-counter {
+  color: white;
+  font-size: 28px;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.track-name {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 16px;
+  font-weight: 300;
+}
+
+.race-state-info {
+  display: flex;
+  gap: 20px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.state-item {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  font-weight: 400;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 12px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.apex-content {
+  display: flex;
+  padding: 40px 60px;
+  gap: 80px;
+  align-items: flex-start;
+}
+
+.agents-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex-shrink: 0;
+}
+
+.agent-card {
+  background: rgba(30, 30, 30, 0.8);
+  border: 1.5px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 280px;
+  position: relative;
+}
+
+.agent-card:hover {
+  background: rgba(40, 40, 40, 0.9);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: translateX(8px);
+}
+
+.agent-card.agent-red {
+  border-color: rgba(255, 68, 68, 0.4);
+}
+
+.agent-card.agent-green {
+  border-color: rgba(76, 175, 80, 0.4);
+}
+
+.agent-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #4CAF50;
+  flex-shrink: 0;
+  box-shadow: 0 0 10px rgba(76, 175, 80, 0.6);
+}
+
+.agent-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  background: transparent;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.agent-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agent-name {
+  color: white;
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.agent-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 300;
+}
+
+.agent-arrow {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.coordinator-section {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 400px;
+  min-height: 600px;
+}
+
+.flow-arrows {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+}
+
+.coordinator-node {
+  background: rgba(30, 30, 30, 0.8);
+  border: 1.5px solid rgba(255, 68, 68, 0.4);
+  border-radius: 16px;
+  padding: 40px 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+.coordinator-icon {
+  margin-bottom: 8px;
+}
+
+.coordinator-title {
+  color: white;
+  font-size: 32px;
+  font-weight: 500;
+  letter-spacing: 2px;
+}
+
+.coordinator-subtitle {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-weight: 300;
+  letter-spacing: 1px;
+}
+
+.strategy-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  flex-shrink: 0;
+  min-width: 500px;
+}
+
+.strategy-header {
+  color: white;
+  font-size: 32px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.strategy-boxes {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.strategy-box {
+  background: rgba(80, 80, 80, 0.5);
+  border-radius: 18px;
+  padding: 24px 28px;
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  transition: all 0.3s ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  min-height: 100px;
+}
+
+.strategy-box:hover {
+  transform: translateX(-4px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.strategy-box.selected {
+  transform: scale(1.02);
+  opacity: 0.7;
+}
+
+.strategy-boxes {
+  animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* HIGHLY_RECOMMENDED - Green */
+.strategy-box.strategy-highly_recommended {
+  background: rgba(76, 175, 80, 0.15);
+  border-color: rgba(76, 175, 80, 0.6);
+}
+
+.strategy-box.strategy-highly_recommended:hover {
+  background: rgba(76, 175, 80, 0.25);
+  border-color: rgba(76, 175, 80, 0.9);
+  box-shadow: 0 4px 25px rgba(76, 175, 80, 0.4);
+}
+
+/* RECOMMENDED - Yellow */
+.strategy-box.strategy-recommended {
+  background: rgba(255, 193, 7, 0.15);
+  border-color: rgba(255, 193, 7, 0.6);
+}
+
+.strategy-box.strategy-recommended:hover {
+  background: rgba(255, 193, 7, 0.25);
+  border-color: rgba(255, 193, 7, 0.9);
+  box-shadow: 0 4px 25px rgba(255, 193, 7, 0.4);
+}
+
+/* ALTERNATIVE - Red */
+.strategy-box.strategy-alternative {
+  background: rgba(244, 67, 54, 0.15);
+  border-color: rgba(244, 67, 54, 0.6);
+}
+
+.strategy-box.strategy-alternative:hover {
+  background: rgba(244, 67, 54, 0.25);
+  border-color: rgba(244, 67, 54, 0.9);
+  box-shadow: 0 4px 25px rgba(244, 67, 54, 0.4);
+}
+
+.strategy-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.strategy-option {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.strategy-title {
+  color: white;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  margin-bottom: 2px;
+}
+
+.strategy-description {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 13px;
+  line-height: 1.4;
+  margin-bottom: 4px;
+}
+
+.strategy-reasoning {
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
+  line-height: 1.4;
+  font-style: italic;
+  margin-bottom: 6px;
+}
+
+.strategy-metrics {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+.metric {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.strategy-confidence-badge {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 600;
+  align-self: flex-start;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 3px 10px;
+  border-radius: 10px;
+  letter-spacing: 0.5px;
+}
+
+.race-finished {
+  background: rgba(30, 30, 30, 0.8);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 30px 25px;
+  text-align: left;
+  animation: fadeIn 0.5s ease-in;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.race-finished-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.race-finished-title {
+  color: white;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.race-finished-message {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.race-performance {
+  margin-bottom: 20px;
+}
+
+.performance-header,
+.section-header {
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.performance-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.perf-stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.perf-stat .label {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.perf-stat .value {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.perf-stat.highlight {
+  background: rgba(76, 175, 80, 0.15);
+  border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.leaderboard-section,
+.strategy-summary,
+.decision-timeline-section {
+  margin-bottom: 20px;
+}
+
+.leaderboard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 25px 40px 1fr 80px;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.leaderboard-row.your-position {
+  background: rgba(255, 193, 7, 0.15);
+  border: 1px solid rgba(255, 193, 7, 0.4);
+  font-weight: 600;
+}
+
+.driver-marker {
+  color: white;
+  font-size: 14px;
+}
+
+.driver-code {
+  color: rgba(255, 255, 255, 0.95);
+  font-weight: 600;
+}
+
+.team-name {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.time {
+  color: rgba(255, 255, 255, 0.9);
+  text-align: right;
+  font-weight: 500;
+}
+
+.summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.summary-item,
+.pit-detail {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+}
+
+.timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 10px;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+.lap-num {
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 600;
+  min-width: 50px;
+}
+
+.decision-text {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.stat {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 15px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 20px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.no-strategies {
+  background: rgba(30, 30, 30, 0.6);
+  border: 2px dashed rgba(255, 255, 255, 0.2);
+  border-radius: 14px;
+  padding: 40px 30px;
+  text-align: center;
+}
+
+.no-strategies-message {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 14px;
+  font-style: italic;
+}

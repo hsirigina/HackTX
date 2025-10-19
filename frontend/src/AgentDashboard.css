@@ -760,6 +760,259 @@
   font-weight: 600;
 }
 
+/* Final Results Container */
+.final-results-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 20px;
+  max-height: calc(100vh - 200px);
+  overflow-y: auto;
+  position: relative;
+  z-index: 1;
+}
+
+/* Race Performance Section */
+.race-performance-section {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
+  animation: fadeIn 0.5s ease;
+}
+
+.section-header {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 3px;
+  color: #ffd700;
+  margin-bottom: 20px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(255, 215, 0, 0.3);
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.5);
+}
+
+.performance-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.perf-stat {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 15px;
+  border-radius: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.perf-stat:hover {
+  background: rgba(0, 191, 255, 0.1);
+  transform: translateY(-3px);
+}
+
+.perf-label {
+  font-size: 11px;
+  color: #8899aa;
+  letter-spacing: 1px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.perf-value {
+  font-size: 32px;
+  color: #fff;
+  font-weight: 900;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
+}
+
+.perf-value.highlight {
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.8);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+/* Leaderboard Section */
+.leaderboard-section {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(0, 191, 255, 0.3);
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 0 30px rgba(0, 191, 255, 0.2);
+  animation: fadeIn 0.5s ease 0.1s both;
+  grid-row: span 2;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 30px 80px 1fr 120px;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 4px;
+  margin-bottom: 8px;
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease;
+}
+
+.leaderboard-row:hover {
+  background: rgba(0, 191, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.leaderboard-row.your-position {
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), rgba(255, 215, 0, 0.05));
+  border: 2px solid rgba(255, 215, 0, 0.5);
+  box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+  transform: scale(1.02);
+}
+
+.driver-marker {
+  font-size: 18px;
+  text-align: center;
+}
+
+.driver-code {
+  font-size: 16px;
+  font-weight: 900;
+  color: #00bfff;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+}
+
+.your-position .driver-code {
+  color: #ffd700;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+}
+
+.team-name {
+  font-size: 12px;
+  color: #8899aa;
+  font-weight: 600;
+}
+
+.time {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 700;
+  text-align: right;
+  font-family: 'Orbitron', sans-serif;
+}
+
+/* Strategy Summary Section */
+.strategy-summary-section {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(76, 175, 80, 0.3);
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 0 30px rgba(76, 175, 80, 0.2);
+  animation: fadeIn 0.5s ease 0.2s both;
+}
+
+.pit-detail {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 12px 15px;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  color: #fff;
+  font-weight: 600;
+  border-left: 3px solid #4caf50;
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease;
+}
+
+.pit-detail:hover {
+  background: rgba(76, 175, 80, 0.1);
+  transform: translateX(5px);
+  border-left-width: 5px;
+}
+
+/* Decision Timeline Section */
+.decision-timeline-section {
+  background: rgba(0, 0, 0, 0.4);
+  border: 2px solid rgba(156, 39, 176, 0.3);
+  border-radius: 8px;
+  padding: 25px;
+  box-shadow: 0 0 30px rgba(156, 39, 176, 0.2);
+  animation: fadeIn 0.5s ease 0.3s both;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.timeline-item {
+  display: flex;
+  gap: 15px;
+  padding: 10px;
+  border-left: 2px solid rgba(156, 39, 176, 0.4);
+  margin-left: 10px;
+  margin-bottom: 12px;
+  position: relative;
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease;
+}
+
+.timeline-item::before {
+  content: '';
+  position: absolute;
+  left: -7px;
+  top: 12px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #9c27b0;
+  box-shadow: 0 0 10px rgba(156, 39, 176, 0.6);
+}
+
+.timeline-item:hover {
+  background: rgba(156, 39, 176, 0.1);
+  transform: translateX(5px);
+}
+
+.lap-num {
+  font-size: 12px;
+  font-weight: 900;
+  color: #9c27b0;
+  min-width: 70px;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.decision-text {
+  font-size: 13px;
+  color: #aabbcc;
+  font-weight: 600;
+  flex: 1;
+}
+
+/* Scrollbar Styling */
+.final-results-container::-webkit-scrollbar,
+.decision-timeline-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.final-results-container::-webkit-scrollbar-track,
+.decision-timeline-section::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+.final-results-container::-webkit-scrollbar-thumb,
+.decision-timeline-section::-webkit-scrollbar-thumb {
+  background: rgba(0, 191, 255, 0.5);
+  border-radius: 4px;
+}
+
+.final-results-container::-webkit-scrollbar-thumb:hover,
+.decision-timeline-section::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 191, 255, 0.8);
+}
+
 /* Responsive */
 @media (max-width: 1600px) {
   .dash-main {
@@ -769,6 +1022,20 @@
 
 @media (max-width: 1200px) {
   .dash-main {
+    grid-template-columns: 1fr;
+  }
+
+  .final-results-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .final-results-container {
+    padding: 10px;
+  }
+
+  .performance-grid {
     grid-template-columns: 1fr;
   }
 }
