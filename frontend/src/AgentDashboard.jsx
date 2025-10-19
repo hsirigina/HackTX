@@ -1078,23 +1078,6 @@ function AgentDashboard() {
             </div>
           </div>
 
-          <div className="api-efficiency">
-            <div className="efficiency-title">API EFFICIENCY</div>
-            <div className="efficiency-stats">
-              <div className="stat-box">
-                <div className="stat-num">{apiCalls}</div>
-                <div className="stat-label">API Calls</div>
-              </div>
-              <div className="stat-box">
-                <div className="stat-num">{currentLap || 0}</div>
-                <div className="stat-label">Laps Analyzed</div>
-              </div>
-              <div className="stat-box">
-                <div className="stat-num">{Math.round((1 - (apiCalls / (currentLap || 1))) * 100)}%</div>
-                <div className="stat-label">Cost Saved</div>
-              </div>
-            </div>
-          </div>
         </div>
 
         {/* Right Column - Position & Competitor Agents */}
@@ -1219,6 +1202,7 @@ function AgentDashboard() {
           avg_time: insights?.laptime?.avg_time,
           trend: insights?.laptime?.trend
         }}
+        selectedRace={{ id: 'bahrain', name: 'Bahrain Grand Prix', laps: 57 }}
       />
 
       {/* Position Modal */}

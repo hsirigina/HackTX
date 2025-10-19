@@ -85,13 +85,6 @@ function TireModal({ isOpen, onClose, tireData }) {
             {/* Tire Image */}
             <div className="tire-image-container">
               <img src="/tire.png" alt="F1 Tire" className="tire-image-spin" />
-              <div className="tire-compound-indicator" style={{ 
-                borderColor: getCompoundColor(mockData.compound),
-                boxShadow: `0 0 20px ${getCompoundColor(mockData.compound)}50`
-              }}>
-                <div className="compound-stripe" style={{ background: getCompoundColor(mockData.compound) }}></div>
-                <div className="compound-name">{mockData.compound}</div>
-              </div>
             </div>
 
             {/* Circular Gauges - McLaren Style */}
@@ -159,23 +152,19 @@ function TireModal({ isOpen, onClose, tireData }) {
                 <div className="telemetry-data-grid">
                   <div className="telemetry-row">
                     <span className="telem-label">vCar</span>
-                    <span className="telem-value cyan">={mockData.avgPressure.toFixed(1)}</span>
-                    <span className="telem-unit">bar</span>
+                    <span className="telem-value cyan">={mockData.avgPressure.toFixed(1)} bar</span>
                   </div>
                   <div className="telemetry-row">
                     <span className="telem-label">nGear</span>
                     <span className="telem-value cyan">=6</span>
-                    <span className="telem-unit"></span>
                   </div>
                   <div className="telemetry-row">
                     <span className="telem-label">rThrottlePedal</span>
-                    <span className="telem-value cyan">=100.0</span>
-                    <span className="telem-unit">%</span>
+                    <span className="telem-value cyan">=100.0 %</span>
                   </div>
                   <div className="telemetry-row">
                     <span className="telem-label">pBrakeF</span>
-                    <span className="telem-value cyan">=0.0</span>
-                    <span className="telem-unit">%</span>
+                    <span className="telem-value cyan">=0.0 %</span>
                   </div>
                 </div>
               </div>
