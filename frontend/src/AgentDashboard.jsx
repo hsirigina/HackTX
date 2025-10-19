@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
+import TireModal from './TireModal'
+import LaptimeModal from './LaptimeModal'
+import PositionModal from './PositionModal'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'race-session-' + Date.now()
@@ -23,17 +26,71 @@ function AgentDashboard() {
     totalRaceTime: 0,
     pitStops: 0
   })
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(false)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [raceFinished, setRaceFinished] = useState(false)
   const [finalResults, setFinalResults] = useState(null)
+  const [isTireModalOpen, setIsTireModalOpen] = useState(false)
+  const [isLaptimeModalOpen, setIsLaptimeModalOpen] = useState(false)
+  const [isPositionModalOpen, setIsPositionModalOpen] = useState(false)
 
   // Start race and fetch backend data
   useEffect(() => {
     startRace()
   }, [])
 
+  // Poll gesture server for hand gestures
+  useEffect(() => {
+    let lastGestureTime = 0
+    const GESTURE_COOLDOWN = 1000 // 1 second cooldown between gestures
+
+    const pollGestures = async () => {
+      try {
+        const response = await fetch('http://localhost:5001/api/gesture')
+        const data = await response.json()
+
+        // Log all gestures for debugging
+        if (data.gesture !== 'No Gesture') {
+          console.log('Gesture received:', data.gesture, 'Current index:', currentScenarioIndex, 'Total scenarios:', scenarios.length)
+        }
+
+        const now = Date.now()
+
+        // Check if enough time has passed since last gesture
+        if (now - lastGestureTime < GESTURE_COOLDOWN) {
+          return
+        }
+
+        if (data.gesture === 'Swipe Left' && currentScenarioIndex > 0) {
+          console.log('✅ Detected Swipe Left - Moving to previous scenario')
+          goToPrevScenario()
+          lastGestureTime = now
+          // Clear the gesture
+          await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+        } else if (data.gesture === 'Swipe Right' && currentScenarioIndex < scenarios.length - 1) {
+          console.log('✅ Detected Swipe Right - Moving to next scenario')
+          goToNextScenario()
+          lastGestureTime = now
+          // Clear the gesture
+          await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+        } else if (data.gesture !== 'No Gesture') {
+          console.log('❌ Gesture not triggering navigation. Gesture:', data.gesture, 'CanGoNext:', currentScenarioIndex < scenarios.length - 1, 'CanGoPrev:', currentScenarioIndex > 0)
+        }
+      } catch (error) {
+        // Gesture server not running, that's okay
+        console.debug('Gesture server not available')
+      }
+    }
+
+    // Poll every 300ms for gestures
+    const interval = setInterval(pollGestures, 300)
+    return () => clearInterval(interval)
+  }, [currentScenarioIndex, scenarios.length])
+
   const startRace = async () => {
-    setLoading(true)
+    setInitialLoading(true)
+    const startTime = Date.now()
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/race/start`, {
         method: 'POST',
@@ -65,11 +122,24 @@ function AgentDashboard() {
         reasoning: `Starting from P${data.state.position} on ${data.state.tireCompound} tires`
       }])
 
-      setLoading(false)
+      // Ensure minimum 5 seconds of loading
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, 5000 - elapsedTime)
+
+      setTimeout(() => {
+        setInitialLoading(false)
+      }, remainingTime)
     } catch (error) {
       console.error('Failed to start race:', error)
-      alert('Failed to connect to backend API. Make sure the backend is running on port 8000. Error: ' + error.message)
-      setLoading(false)
+
+      // Still wait minimum 5 seconds even on error
+      const elapsedTime = Date.now() - startTime
+      const remainingTime = Math.max(0, 5000 - elapsedTime)
+
+      setTimeout(() => {
+        alert('Failed to connect to backend API. Make sure the backend is running on port 8000. Error: ' + error.message)
+        setInitialLoading(false)
+      }, remainingTime)
     }
   }
 
@@ -215,14 +285,12 @@ function AgentDashboard() {
     }
   }
 
-  if (loading) {
+  if (initialLoading) {
     return (
-      <div className="agent-dashboard" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ textAlign: 'center', color: 'white' }}>
-          <div style={{ fontSize: '48px', marginBottom: '20px' }}>🏎️</div>
-          <div style={{ fontSize: '24px', marginBottom: '10px' }}>Loading Race Data...</div>
-          <div style={{ fontSize: '14px', color: '#667788' }}>Connecting to backend on port 8000...</div>
-        </div>
+      <div className="loading-container">
+        <div className="loading-apex-title"></div>
+        <div className="loading-spinner"></div>
+        <div className="loading-text">INITIALIZING F1 STRATEGY SYSTEM...</div>
       </div>
     )
   }
@@ -240,9 +308,9 @@ function AgentDashboard() {
         {/* Left Column - Tire & LapTime Agents */}
         <div className="agents-column">
           {/* Tire Data Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsTireModalOpen(true)} style={{cursor: 'pointer'}}>
             <div className="agent-header">
-              <div className="agent-icon">🛞</div>
+              <div className="agent-icon"><img src="/tireagent.png" alt="Tire Agent" /></div>
               <div className="agent-name">TIRE DATA AGENT</div>
               <div className={`agent-status ${insights.tire.status || 'active'}`}>
                 {insights.tire.status || 'ACTIVE'}
@@ -278,9 +346,9 @@ function AgentDashboard() {
           </div>
 
           {/* LapTime Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsLaptimeModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
-              <div className="agent-icon">⏱️</div>
+              <div className="agent-icon"><img src="/stopwatch agent.png" alt="Laptime Agent" /></div>
               <div className="agent-name">LAPTIME AGENT</div>
               <div className={`agent-status ${insights.laptime.status || 'active'}`}>
                 {insights.laptime.status || 'ACTIVE'}
@@ -351,75 +419,28 @@ function AgentDashboard() {
           {/* Swipable Scenario Carousel OR Final Results */}
           {raceFinished ? (
             <div className="final-results-container">
-              <div className="results-header">
-                <div className="results-icon">🏁</div>
-                <div className="results-title">RACE FINISHED!</div>
-              </div>
-
               {finalResults && (
-                <>
-                  <div className="race-performance-section">
-                    <div className="section-header">🏆 YOUR RACE PERFORMANCE</div>
-                    <div className="performance-grid">
-                      <div className="perf-stat">
-                        <span className="perf-label">Your time:</span>
-                        <span className="perf-value">{finalResults.user_time.toFixed(1)}s</span>
-                      </div>
-                      <div className="perf-stat">
-                        <span className="perf-label">Winner's time:</span>
-                        <span className="perf-value">{finalResults.full_leaderboard[0].time.toFixed(1)}s</span>
-                      </div>
-                      <div className="perf-stat">
-                        <span className="perf-label">Gap to winner:</span>
-                        <span className="perf-value highlight">+{finalResults.gap_to_winner.toFixed(1)}s</span>
-                      </div>
-                      <div className="perf-stat">
-                        <span className="perf-label">Final position:</span>
-                        <span className="perf-value highlight">P{finalResults.leaderboard_position} / {finalResults.total_drivers}</span>
-                      </div>
+                <div className="race-performance-section">
+                  <div className="section-header">🏆 YOUR RACE PERFORMANCE</div>
+                  <div className="performance-grid">
+                    <div className="perf-stat">
+                      <span className="perf-label">Your time:</span>
+                      <span className="perf-value">{finalResults.user_time.toFixed(1)}s</span>
+                    </div>
+                    <div className="perf-stat">
+                      <span className="perf-label">Winner's time:</span>
+                      <span className="perf-value">{finalResults.full_leaderboard[0].time.toFixed(1)}s</span>
+                    </div>
+                    <div className="perf-stat">
+                      <span className="perf-label">Gap to winner:</span>
+                      <span className="perf-value highlight">+{finalResults.gap_to_winner.toFixed(1)}s</span>
+                    </div>
+                    <div className="perf-stat">
+                      <span className="perf-label">Final position:</span>
+                      <span className="perf-value highlight">P{finalResults.leaderboard_position} / {finalResults.total_drivers}</span>
                     </div>
                   </div>
-
-                  <div className="leaderboard-section">
-                    <div className="section-header">📊 LEADERBOARD (Your Position)</div>
-                    <div className="leaderboard-grid">
-                      {finalResults.nearby_drivers.map((driver, idx) => (
-                        <div key={idx} className={`leaderboard-row ${driver.driver === 'YOU' ? 'your-position' : ''}`}>
-                          <span className="driver-marker">{driver.driver === 'YOU' ? '👉' : ''}</span>
-                          <span className="driver-code">{driver.driver}</span>
-                          <span className="team-name">{driver.team}</span>
-                          <span className="time">{driver.time.toFixed(1)}s</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="strategy-summary-section">
-                    <div className="section-header">📋 YOUR STRATEGY</div>
-                    <div className="summary-grid">
-                      <div className="summary-stat">
-                        <strong>Pit stops:</strong> {finalResults.pit_stops}
-                      </div>
-                      {finalResults.pit_stop_details.map((pit, idx) => (
-                        <div key={idx} className="pit-detail">
-                          Pit {idx + 1}: Lap {pit.lap} → {pit.compound} tires
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="decision-timeline-section">
-                    <div className="section-header">📋 DECISION TIMELINE</div>
-                    <div className="timeline-grid">
-                      {finalResults.decision_timeline.map((decision, idx) => (
-                        <div key={idx} className="timeline-item">
-                          <span className="lap-num">Lap {decision.lap}:</span>
-                          <span className="decision-text">{decision.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           ) : (
@@ -552,9 +573,9 @@ function AgentDashboard() {
         {/* Right Column - Position & Competitor Agents */}
         <div className="agents-column">
           {/* Position Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsPositionModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
-              <div className="agent-icon">🏁</div>
+              <div className="agent-icon"><img src="/flagAgent.png" alt="Position Agent" /></div>
               <div className="agent-name">POSITION AGENT</div>
               <div className={`agent-status ${insights.position.status || 'active'}`}>
                 {insights.position.status || 'ACTIVE'}
@@ -592,7 +613,7 @@ function AgentDashboard() {
           {/* Competitor Agent */}
           <div className="agent-card">
             <div className="agent-header">
-              <div className="agent-icon">🎯</div>
+              <div className="agent-icon"><img src="/trackagent.png" alt="Competitor Agent" /></div>
               <div className="agent-name">COMPETITOR AGENT</div>
               <div className={`agent-status ${insights.competitor.status || 'active'}`}>
                 {insights.competitor.status || 'ACTIVE'}
@@ -635,6 +656,40 @@ function AgentDashboard() {
           <span>RACE: Bahrain 2024 • POSITION: P{raceState.position} • TIRES: {raceState.tireCompound} ({raceState.tireAge} laps) • STYLE: {raceState.drivingStyle}</span>
         </div>
       </div>
+
+      {/* Tire Modal */}
+      <TireModal
+        isOpen={isTireModalOpen}
+        onClose={() => setIsTireModalOpen(false)}
+        tireData={{
+          compound: raceState.tireCompound,
+          age: raceState.tireAge,
+          degradation: insights?.tire?.degradation
+        }}
+      />
+
+      {/* Laptime Modal */}
+      <LaptimeModal
+        isOpen={isLaptimeModalOpen}
+        onClose={() => setIsLaptimeModalOpen(false)}
+        laptimeData={{
+          current_time: insights?.laptime?.current_time,
+          avg_time: insights?.laptime?.avg_time,
+          trend: insights?.laptime?.trend
+        }}
+      />
+
+      {/* Position Modal */}
+      <PositionModal
+        isOpen={isPositionModalOpen}
+        onClose={() => setIsPositionModalOpen(false)}
+        positionData={{
+          position: insights?.position?.position,
+          gap_ahead: insights?.position?.gap_ahead,
+          gap_behind: insights?.position?.gap_behind
+        }}
+        currentLap={currentLap}
+      />
     </div>
   )
 }
