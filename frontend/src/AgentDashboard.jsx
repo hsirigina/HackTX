@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'race-session-' + Date.now()
 
 function AgentDashboard() {
+  const navigate = useNavigate()
   const [scenarios, setScenarios] = useState([])
   const [currentScenarioIndex, setCurrentScenarioIndex] = useState(0)
   const [currentLap, setCurrentLap] = useState(1)
@@ -319,6 +321,26 @@ function AgentDashboard() {
           <div className="coordinator-header">
             <div className="coord-title">AI COORDINATOR</div>
             <div className="coord-model">Gemini 2.0 Flash</div>
+            <button
+              className="live-sim-button"
+              onClick={() => navigate('/livesim')}
+              style={{
+                marginLeft: 'auto',
+                padding: '8px 16px',
+                backgroundColor: '#ff1e00',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#cc1800'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#ff1e00'}
+            >
+              🎮 Live Sim
+            </button>
           </div>
 
           <div className="lap-display">

@@ -9,7 +9,8 @@
       "Bash(python run_interactive_simulator.py)",
       "Bash(python api_server.py)",
       "Bash(cat main.jsx)",
-      "Bash(cat /Users/renjit_joseph/Documents/GitHub/HackTX/frontend/src/main.jsx)"
+      "Bash(cat /Users/renjit_joseph/Documents/GitHub/HackTX/frontend/src/main.jsx)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "ask": []

@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
 import AgentDashboard from './AgentDashboard.jsx'
 import McLarenDashboard from './McLarenDashboard.jsx'
+import LiveSim from './LiveSim.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -11,6 +12,7 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<AgentDashboard />} />
         <Route path="/monitor" element={<McLarenDashboard />} />
+        <Route path="/livesim" element={<LiveSim />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>,
