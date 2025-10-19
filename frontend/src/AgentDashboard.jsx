@@ -973,7 +973,18 @@ function AgentDashboard() {
           </div>
 
           {/* Competitor Agent */}
-          <div className="agent-card">
+          <div 
+            className="agent-card" 
+            onClick={() => navigate('/monitor', { 
+              state: { 
+                selectedRace: { id: 'bahrain', name: 'Bahrain Grand Prix', laps: 57 },
+                selectedDriver: 'VER',
+                currentLap: currentLap,
+                raceState: raceState
+              } 
+            })} 
+            style={{cursor: 'pointer'}}
+          >
             <div className="agent-header">
               <div className="agent-icon"><img src="/trackagent.png" alt="Competitor Agent" /></div>
               <div className="agent-name">COMPETITOR AGENT</div>

@@ -785,7 +785,29 @@ function LiveSim() {
           </div>
 
           {/* Competitor Agent */}
-          <div className="agent-card">
+          <div 
+            className="agent-card" 
+            onClick={() => navigate('/monitor', { 
+              state: { 
+                selectedRace: selectedRace,
+                selectedDriver: selectedDriver,
+                currentLap: currentLap,
+                raceState: raceState
+              } 
+            })} 
+            style={{
+              cursor: 'pointer',
+              transition: 'transform 0.2s, box-shadow 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.02)';
+              e.currentTarget.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
             <div className="agent-header">
               <div className="agent-icon">🎯</div>
               <div className="agent-name">COMPETITOR AGENT</div>
