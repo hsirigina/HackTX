@@ -995,6 +995,127 @@ def convert_options_to_response(options: List[DecisionOption]) -> List[dict]:
     return result
 
 
+@app.get("/api/agents/insights/{session_id}")
+def get_agent_insights(session_id: str):
+    """Get real-time agent insights for dashboard"""
+    if session_id not in race_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = race_sessions[session_id]
+    simulator = session.simulator
+    state = simulator.state
+    
+    # Calculate real-time insights
+    avg_lap_time = state.total_race_time / max(state.current_lap, 1)
+    
+    # Calculate gaps (simplified - in real implementation would use competitor data)
+    gap_ahead = max(0.0, (state.position - 1) * 0.5)  # Assume 0.5s gap per position
+    gap_behind = max(0.0, (20 - state.position) * 0.3)  # Assume 0.3s gap behind
+    
+    # Determine tire degradation trend
+    tire_degradation = "+0.0"
+    if state.tire_age > 20:
+        tire_degradation = f"+{min(2.0, (state.tire_age - 20) * 0.1):.1f}"
+    elif state.tire_age > 15:
+        tire_degradation = f"+{min(1.0, (state.tire_age - 15) * 0.2):.1f}"
+    
+    # Generate tire triggers
+    tire_triggers = []
+    if state.tire_age > 25:
+        tire_triggers.append({"message": f"Critical tire wear ({state.tire_age} laps)", "urgency": "CRITICAL"})
+    elif state.tire_age > 20:
+        tire_triggers.append({"message": f"High tire wear ({state.tire_age} laps)", "urgency": "HIGH"})
+    elif state.tire_age > 15:
+        tire_triggers.append({"message": "Tire degradation increasing", "urgency": "MEDIUM"})
+    
+    # Generate position triggers
+    position_triggers = []
+    if gap_behind < 1.0:
+        position_triggers.append({"message": "Driver behind closing gap", "urgency": "HIGH"})
+    elif gap_ahead < 2.0:
+        position_triggers.append({"message": "Opportunity to attack ahead", "urgency": "MEDIUM"})
+    
+    # Generate competitor threats
+    threats = 0
+    if gap_behind < 2.0:
+        threats += 1
+    if gap_ahead < 1.5:
+        threats += 1
+    
+    return {
+        "tire": {
+            "compound": state.tire_compound,
+            "tire_age": state.tire_age,
+            "degradation": tire_degradation,
+            "status": "active",
+            "triggers": tire_triggers
+        },
+        "laptime": {
+            "current_time": f"{avg_lap_time:.3f}",
+            "avg_time": f"{avg_lap_time:.3f}",
+            "trend": state.driving_style.value,
+            "status": "active",
+            "triggers": []
+        },
+        "position": {
+            "position": state.position,
+            "gap_ahead": f"+{gap_ahead:.1f}",
+            "gap_behind": f"-{gap_behind:.1f}",
+            "status": "active",
+            "triggers": position_triggers
+        },
+        "competitor": {
+            "threats": threats,
+            "pit_status": f"{len(state.pit_stops)} STOPS" if state.pit_stops else "NO STOPS",
+            "status": "active",
+            "triggers": []
+        }
+    }
+
+
+@app.get("/api/agents/status/{session_id}")
+def get_agent_status(session_id: str):
+    """Get detailed agent status for modals"""
+    if session_id not in race_sessions:
+        raise HTTPException(status_code=404, detail="Session not found")
+
+    session = race_sessions[session_id]
+    simulator = session.simulator
+    state = simulator.state
+    
+    # Calculate detailed metrics
+    avg_lap_time = state.total_race_time / max(state.current_lap, 1)
+    gap_ahead = max(0.0, (state.position - 1) * 0.5)
+    gap_behind = max(0.0, (20 - state.position) * 0.3)
+    
+    return {
+        "tire": {
+            "compound": state.tire_compound,
+            "age": state.tire_age,
+            "degradation": f"+{min(2.0, max(0, state.tire_age - 15) * 0.1):.1f}s",
+            "predicted_cliff": max(0, 30 - state.tire_age),
+            "status": "active"
+        },
+        "laptime": {
+            "current_time": f"{avg_lap_time:.3f}s",
+            "avg_time": f"{avg_lap_time:.3f}s",
+            "trend": state.driving_style.value,
+            "sector_times": {
+                "sector1": f"{avg_lap_time * 0.35:.3f}s",
+                "sector2": f"{avg_lap_time * 0.40:.3f}s", 
+                "sector3": f"{avg_lap_time * 0.25:.3f}s"
+            }
+        },
+        "position": {
+            "position": state.position,
+            "gap_ahead": f"+{gap_ahead:.1f}s",
+            "gap_behind": f"-{gap_behind:.1f}s",
+            "total_laps": simulator.total_laps,
+            "laps_remaining": max(0, simulator.total_laps - state.current_lap)
+        }
+    }
+
+
 if __name__ == "__main__":
     print("🏎️  Starting F1 Race Strategy API Server...")
     print("📡 API will be available at http://localhost:8000")

@@ -44,6 +44,8 @@ function AgentDashboard() {
   const [loadingRaces, setLoadingRaces] = useState(true)
   const [raceStarted, setRaceStarted] = useState(false)
   const [lastRaceResults, setLastRaceResults] = useState(null)
+  const [showF1Lights, setShowF1Lights] = useState(false)
+  const [lightsSequence, setLightsSequence] = useState(0)
 
   // Load available races on mount
   useEffect(() => {
@@ -72,20 +74,34 @@ function AgentDashboard() {
           return
         }
 
-        if (data.gesture === 'Swipe Left' && currentScenarioIndex > 0) {
-          console.log('✅ Detected Swipe Left - Moving to previous scenario')
-          goToPrevScenario()
-          lastGestureTime = now
-          // Clear the gesture
-          await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
-        } else if (data.gesture === 'Swipe Right' && currentScenarioIndex < scenarios.length - 1) {
-          console.log('✅ Detected Swipe Right - Moving to next scenario')
-          goToNextScenario()
-          lastGestureTime = now
-          // Clear the gesture
-          await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+        // Only handle gestures when not showing F1 lights and scenarios are available
+        if (!showF1Lights && scenarios.length > 0) {
+          if (data.gesture === 'Swipe Left' && currentScenarioIndex < scenarios.length - 1) {
+            console.log('✅ Detected Swipe Left - Moving to next scenario')
+            goToNextScenario()
+            lastGestureTime = now
+            // Clear the gesture
+            await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+          } else if (data.gesture === 'Swipe Right' && currentScenarioIndex > 0) {
+            console.log('✅ Detected Swipe Right - Moving to previous scenario')
+            goToPrevScenario()
+            lastGestureTime = now
+            // Clear the gesture
+            await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+          } else if (data.gesture === 'Peace Sign' || data.gesture === 'V Sign') {
+            console.log('✌️ Detected Peace Sign - Selecting current strategy option')
+            const currentScenario = scenarios[currentScenarioIndex]
+            if (currentScenario) {
+              handleScenarioSelect(currentScenario)
+            }
+            lastGestureTime = now
+            // Clear the gesture
+            await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
+          } else if (data.gesture !== 'No Gesture') {
+            console.log('❌ Gesture not triggering navigation. Gesture:', data.gesture, 'CanGoNext:', currentScenarioIndex < scenarios.length - 1, 'CanGoPrev:', currentScenarioIndex > 0)
+          }
         } else if (data.gesture !== 'No Gesture') {
-          console.log('❌ Gesture not triggering navigation. Gesture:', data.gesture, 'CanGoNext:', currentScenarioIndex < scenarios.length - 1, 'CanGoPrev:', currentScenarioIndex > 0)
+          console.log('⏸️ Gesture ignored - F1 lights active or no scenarios available')
         }
       } catch (error) {
         // Gesture server not running, that's okay
@@ -96,7 +112,7 @@ function AgentDashboard() {
     // Poll every 300ms for gestures
     const interval = setInterval(pollGestures, 300)
     return () => clearInterval(interval)
-  }, [currentScenarioIndex, scenarios.length])
+  }, [currentScenarioIndex, scenarios.length, showF1Lights])
 
   const loadAvailableRaces = async () => {
     try {
@@ -184,6 +200,8 @@ function AgentDashboard() {
       setTimeout(() => {
         setInitialLoading(false)
         setLoading(false)
+        // Start F1 lights sequence after loading
+        startF1LightsSequence()
       }, remainingTime)
     } catch (error) {
       console.error('Failed to start race:', error)
@@ -198,6 +216,31 @@ function AgentDashboard() {
         setLoading(false)
       }, remainingTime)
     }
+  }
+
+  // F1 Lights sequence function
+  const startF1LightsSequence = () => {
+    setShowF1Lights(true)
+    setLightsSequence(0)
+    
+    // F1 lights sequence: 5 lights, each 1 second apart, then 2-4 second random delay
+    const lightTimings = [1000, 2000, 3000, 4000, 5000] // 5 lights
+    const randomDelay = 2000 + Math.random() * 2000 // 2-4 seconds random delay
+    
+    lightTimings.forEach((timing, index) => {
+      setTimeout(() => {
+        setLightsSequence(index + 1)
+      }, timing)
+    })
+    
+    // Lights out after random delay
+    setTimeout(() => {
+      setLightsSequence(6) // All lights off
+      setTimeout(() => {
+        setShowF1Lights(false)
+        console.log('🏁 F1 Lights complete - Scenarios available:', scenarios.length)
+      }, 1000)
+    }, 5000 + randomDelay)
   }
 
   // Parse agent insights from race state
@@ -358,22 +401,30 @@ function AgentDashboard() {
   }
 
   const goToPrevScenario = () => {
-    if (currentScenarioIndex > 0 && !isSliding) {
+    console.log('🔄 goToPrevScenario called - Current:', currentScenarioIndex, 'Scenarios:', scenarios.length, 'IsSliding:', isSliding)
+    if (currentScenarioIndex > 0) {
       setIsSliding(true)
       setCurrentScenarioIndex(currentScenarioIndex - 1)
+      console.log('✅ Moving to previous scenario:', currentScenarioIndex - 1)
       setTimeout(() => {
         setIsSliding(false)
-      }, 400)
+      }, 150) // Much faster timeout
+    } else {
+      console.log('❌ Cannot go to previous - Current:', currentScenarioIndex)
     }
   }
 
   const goToNextScenario = () => {
-    if (currentScenarioIndex < scenarios.length - 1 && !isSliding) {
+    console.log('🔄 goToNextScenario called - Current:', currentScenarioIndex, 'Scenarios:', scenarios.length, 'IsSliding:', isSliding)
+    if (currentScenarioIndex < scenarios.length - 1) {
       setIsSliding(true)
       setCurrentScenarioIndex(currentScenarioIndex + 1)
+      console.log('✅ Moving to next scenario:', currentScenarioIndex + 1)
       setTimeout(() => {
         setIsSliding(false)
-      }, 400)
+      }, 150) // Much faster timeout
+    } else {
+      console.log('❌ Cannot go to next - Current:', currentScenarioIndex, 'Max:', scenarios.length - 1)
     }
   }
 
@@ -383,6 +434,151 @@ function AgentDashboard() {
         <div className="loading-apex-title"></div>
         <div className="loading-spinner"></div>
         <div className="loading-text">INITIALIZING RACE SIMULATION...</div>
+      </div>
+    )
+  }
+
+  if (showF1Lights) {
+    return (
+      <div className="agent-dashboard">
+        {/* Top Header */}
+        <div className="dash-header">
+          <div className="apex-header-title"></div>
+        </div>
+
+        {/* Main Content Grid */}
+        <div className="dash-main">
+          {/* Left Column - Tire & LapTime Agents */}
+          <div className="agents-column">
+            {/* Tire Data Agent */}
+            <div className="agent-card">
+              <div className="agent-header">
+                <div className="agent-icon"><img src="/tireagent.png" alt="Tire Agent" /></div>
+                <div className="agent-name">TIRE DATA AGENT</div>
+                <div className="agent-status active">ACTIVE</div>
+              </div>
+              <div className="agent-metrics">
+                <div className="metric">
+                  <span className="metric-label">COMPOUND</span>
+                  <span className="metric-value">SOFT</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">TIRE AGE</span>
+                  <span className="metric-value">0 laps</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">DEGRADATION</span>
+                  <span className="metric-value">+0.0s</span>
+                </div>
+              </div>
+            </div>
+
+            {/* LapTime Agent */}
+            <div className="agent-card">
+              <div className="agent-header">
+                <div className="agent-icon"><img src="/stopwatch agent.png" alt="Laptime Agent" /></div>
+                <div className="agent-name">LAPTIME AGENT</div>
+                <div className="agent-status active">ACTIVE</div>
+              </div>
+              <div className="agent-metrics">
+                <div className="metric">
+                  <span className="metric-label">CURRENT LAP</span>
+                  <span className="metric-value">1:22.5s</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">AVG (5 LAPS)</span>
+                  <span className="metric-value">1:22.8s</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">TREND</span>
+                  <span className="metric-value">STABLE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Center Column - F1 Lights */}
+          <div className="coordinator-column">
+            <div className="coordinator-header">
+              <div className="coord-title">AI COORDINATOR</div>
+              <div className="coord-model">Gemini 2.0 Flash</div>
+            </div>
+
+            <div className="lap-display">
+              <div className="lap-label">CURRENT LAP</div>
+              <div className="lap-number">1<span>/57</span></div>
+            </div>
+
+            {/* F1 Lights in Strategy Area */}
+            <div className="f1-lights-strategy-box">
+              <div className="f1-lights-grid-20">
+                {[1, 2, 3, 4, 5].map((column) => (
+                  <div key={column} className="f1-lights-column">
+                    {[1, 2, 3, 4].map((row) => (
+                      <div 
+                        key={`${column}-${row}`}
+                        className={`f1-light-small ${lightsSequence >= column ? 'active' : ''} ${lightsSequence === 6 ? 'lights-out' : ''}`}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+
+              <div className="f1-timer-display">
+                <div className="f1-timer">00.000</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Right Column - Position & Competitor Agents */}
+          <div className="agents-column">
+            {/* Position Agent */}
+            <div className="agent-card">
+              <div className="agent-header">
+                <div className="agent-icon"><img src="/flagAgent.png" alt="Position Agent" /></div>
+                <div className="agent-name">POSITION AGENT</div>
+                <div className="agent-status active">ACTIVE</div>
+              </div>
+              <div className="agent-metrics">
+                <div className="metric">
+                  <span className="metric-label">POSITION</span>
+                  <span className="metric-value">P3</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">GAP AHEAD</span>
+                  <span className="metric-value">+0.5s</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">GAP BEHIND</span>
+                  <span className="metric-value">-1.2s</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Competitor Agent */}
+            <div className="agent-card">
+              <div className="agent-header">
+                <div className="agent-icon"><img src="/trackagent.png" alt="Competitor Agent" /></div>
+                <div className="agent-name">COMPETITOR AGENT</div>
+                <div className="agent-status active">ACTIVE</div>
+              </div>
+              <div className="agent-metrics">
+                <div className="metric">
+                  <span className="metric-label">MONITORING</span>
+                  <span className="metric-value">P±2</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">THREATS</span>
+                  <span className="metric-value">0</span>
+                </div>
+                <div className="metric">
+                  <span className="metric-label">PIT STATUS</span>
+                  <span className="metric-value">NONE</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
