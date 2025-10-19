@@ -87,9 +87,14 @@ class InteractiveRaceSimulator:
 
         # Get comparison driver's actual race
         self.comparison_laps = self.session.laps.pick_driver(comparison_driver)
-        self.comparison_total_time = self.comparison_laps['Time'].iloc[-1].total_seconds()
 
-        print(f"   ✅ {comparison_driver} finished in {self.comparison_total_time:.1f}s")
+        # Use SUM of lap times, not cumulative time (which includes formation lap + delays)
+        self.comparison_laptimes = self.comparison_laps['LapTime'].dt.total_seconds()
+        self.comparison_total_time = self.comparison_laptimes.sum()
+        self.comparison_avg_laptime = self.comparison_laptimes.mean()
+
+        print(f"   ✅ {comparison_driver} total race time: {self.comparison_total_time:.1f}s ({len(self.comparison_laptimes)} laps)")
+        print(f"   ✅ {comparison_driver} average lap time: {self.comparison_avg_laptime:.2f}s")
 
         # Initialize race state (user starts on grid)
         self.state = None  # Will be set in start_race()
@@ -127,9 +132,10 @@ class InteractiveRaceSimulator:
         )
 
         # Initialize tire model with current driving style
+        # Use VER's actual average lap time as baseline for realism
         self.tire_model = TireDegradationModel(
             total_laps=self.total_laps,
-            base_laptime=97.0,
+            base_laptime=self.comparison_avg_laptime,
             driving_style_multiplier=self.style_manager.get_tire_wear_multiplier()
         )
 
@@ -328,6 +334,14 @@ class InteractiveRaceSimulator:
             ai_confidence=pit_now_hard['confidence']
         ))
 
+        # Sort by AI confidence (HIGHLY_RECOMMENDED first)
+        confidence_order = {'HIGHLY_RECOMMENDED': 0, 'RECOMMENDED': 1, 'ALTERNATIVE': 2, 'NOT_RECOMMENDED': 3}
+        options.sort(key=lambda x: confidence_order.get(x.ai_confidence, 99))
+
+        # Re-number option_ids after sorting
+        for i, opt in enumerate(options, 1):
+            opt.option_id = i
+
         return options
 
     def _generate_driving_style_options(self, lap_number: int, context: Dict) -> List[DecisionOption]:
@@ -522,19 +536,69 @@ class InteractiveRaceSimulator:
         }
 
     def _calculate_stay_out_impact(self, lap_number: int, extend_laps: int, laps_remaining: int) -> Dict:
-        """Calculate impact of staying out N more laps"""
-        # Calculate degradation over next N laps
+        """
+        Calculate impact of staying out N more laps
+        Uses tire model to calculate FULL RACE impact, not just next 3 laps
+        """
         current_tire_age = self.state.tire_age
 
-        # Lap time increase due to wear
+        # Calculate total race time if we stay out to lap_number + extend_laps, then pit
+        future_pit_lap = lap_number + extend_laps
+
+        # Simulate staying out: calculate time from current lap to future pit lap
+        stay_out_time = 0
+        tire_age = current_tire_age
+        for lap in range(lap_number, future_pit_lap):
+            laptime = self.tire_model.calculate_laptime(lap, tire_age, self.state.tire_compound)
+            stay_out_time += laptime
+            tire_age += 1
+
+        # After staying out, we'd pit and run remaining laps on fresh tires
+        # Use MEDIUM as default second stint compound
+        remaining_laps_after_pit = self.total_laps - future_pit_lap
+        if remaining_laps_after_pit > 0:
+            second_stint_time = self.tire_model.calculate_stint_time(
+                start_lap=future_pit_lap + 1,
+                end_lap=self.total_laps,
+                compound='MEDIUM',
+                tire_age_start=1
+            )
+            total_stay_out_strategy = stay_out_time + 25.0 + second_stint_time  # Include pit stop
+        else:
+            # Staying out to the end (no second pit)
+            total_stay_out_strategy = stay_out_time
+
+        # Calculate total race time if we pit NOW
+        pit_now_time = 25.0  # Pit stop loss
+        remaining_laps_after_pit_now = self.total_laps - lap_number
+        if remaining_laps_after_pit_now > 0:
+            stint_on_fresh = self.tire_model.calculate_stint_time(
+                start_lap=lap_number + 1,
+                end_lap=self.total_laps,
+                compound='MEDIUM',
+                tire_age_start=1
+            )
+            total_pit_now_strategy = pit_now_time + stint_on_fresh
+        else:
+            total_pit_now_strategy = 0
+
+        # Race time impact = (stay out strategy) - (pit now strategy)
+        # Negative = stay out is faster, Positive = pit now is faster
+        race_time_impact = total_stay_out_strategy - total_pit_now_strategy
+
+        # Lap time impact for next stint
         wear_rate = self.tire_model.get_tire_wear_rate(self.state.tire_compound, current_tire_age + extend_laps)
-        lap_time_impact = wear_rate * extend_laps
+        lap_time_impact = wear_rate
 
-        # Total race time impact (staying out saves pit stop but costs deg)
-        # Simplified: each lap of deg costs ~0.1s, but saves 25s pit
-        race_time_impact = (lap_time_impact * extend_laps) - 25.0
-
-        confidence = 'RECOMMENDED' if extend_laps <= 3 else 'ALTERNATIVE'
+        # AI confidence based on ACTUAL full race impact
+        if race_time_impact < -15.0:
+            confidence = 'HIGHLY_RECOMMENDED'  # Saves >15s total
+        elif race_time_impact < 0:
+            confidence = 'RECOMMENDED'  # Saves time
+        elif race_time_impact < 30.0:
+            confidence = 'ALTERNATIVE'  # Close call
+        else:
+            confidence = 'NOT_RECOMMENDED'  # Pit now is much faster!
 
         return {
             'lap_time_impact': lap_time_impact,
@@ -612,14 +676,52 @@ class InteractiveRaceSimulator:
 
     def get_final_comparison(self) -> Dict:
         """
-        Compare user's race to Verstappen's actual race
+        Compare user's race to actual Bahrain 2024 results
+        Calculate where user would finish on the leaderboard
 
         Returns:
-            Comparison results with decision timeline
+            Comparison results with leaderboard position
         """
         user_time = self.state.total_race_time
         comparison_time = self.comparison_total_time
         delta = user_time - comparison_time
+
+        # Calculate leaderboard position by comparing to all drivers
+        leaderboard = []
+        for driver_code in self.session.drivers:
+            try:
+                laps = self.session.laps.pick_driver(driver_code)
+                if len(laps) > 0:
+                    laptimes = laps['LapTime'].dt.total_seconds()
+                    total_time = laptimes.sum()
+                    driver_info = self.session.get_driver(driver_code)
+
+                    leaderboard.append({
+                        'driver': driver_code,
+                        'team': driver_info.get('TeamName', 'Unknown'),
+                        'time': total_time
+                    })
+            except:
+                pass
+
+        # Add user's time to leaderboard
+        leaderboard.append({
+            'driver': 'YOU',
+            'team': 'Your Strategy',
+            'time': user_time
+        })
+
+        # Sort by time
+        leaderboard.sort(key=lambda x: x['time'])
+
+        # Find user's position
+        user_position = next(i+1 for i, d in enumerate(leaderboard) if d['driver'] == 'YOU')
+        gap_to_winner = user_time - leaderboard[0]['time']
+
+        # Get nearby drivers (±2 positions)
+        nearby_start = max(0, user_position - 3)
+        nearby_end = min(len(leaderboard), user_position + 2)
+        nearby_drivers = leaderboard[nearby_start:nearby_end]
 
         # Calculate if user would have won
         result = 'WON' if delta < 0 else 'LOST'
@@ -634,7 +736,11 @@ class InteractiveRaceSimulator:
             'pit_stop_details': self.state.pit_stops,
             'decisions_made': len(self.state.decisions_made),
             'decision_timeline': self.state.decisions_made,
-            'final_position': self.state.position  # Simplified - would need full race sim
+            'leaderboard_position': user_position,
+            'total_drivers': len(leaderboard),
+            'gap_to_winner': gap_to_winner,
+            'nearby_drivers': nearby_drivers,
+            'full_leaderboard': leaderboard[:10]  # Top 10
         }
 
 

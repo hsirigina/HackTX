@@ -130,19 +130,32 @@ def run_interactive_race():
     print("🏁 RACE FINISHED!")
     print("="*70)
 
-    print(f"\n🏆 RESULTS:")
+    print(f"\n🏆 YOUR RACE PERFORMANCE:")
     print(f"   Your time:        {final_comparison['user_time']:.1f}s")
-    print(f"   {final_comparison['comparison_driver']}'s time:     {final_comparison['comparison_time']:.1f}s")
-    print(f"   Difference:       {final_comparison['time_delta']:+.1f}s")
+    print(f"   Winner's time:    {final_comparison['full_leaderboard'][0]['time']:.1f}s ({final_comparison['full_leaderboard'][0]['driver']})")
+    print(f"   Gap to winner:    +{final_comparison['gap_to_winner']:.1f}s")
+    print(f"   Final position:   P{final_comparison['leaderboard_position']} / {final_comparison['total_drivers']}")
 
-    if final_comparison['result'] == 'WON':
-        print(f"\n🎉 YOU WON! You beat {final_comparison['comparison_driver']} by {abs(final_comparison['time_delta']):.1f} seconds!")
-    else:
-        print(f"\n😔 You lost by {final_comparison['time_delta']:.1f} seconds. Better luck next time!")
+    # Show leaderboard around user
+    print(f"\n📊 LEADERBOARD (Your Position):")
+    print("="*70)
+    for driver in final_comparison['nearby_drivers']:
+        is_you = driver['driver'] == 'YOU'
+        marker = '👉' if is_you else '  '
+        print(f"{marker} {driver['driver']:3s}  {driver['team']:25s}  {driver['time']:.1f}s")
 
-    print(f"\n📊 RACE SUMMARY:")
+    # Show full top 10
+    print(f"\n🏁 FULL TOP 10:")
+    print("="*70)
+    for i, driver in enumerate(final_comparison['full_leaderboard'], 1):
+        is_you = driver['driver'] == 'YOU'
+        marker = '👉' if is_you else f'P{i}'
+        print(f"{marker:3s} {driver['driver']:3s}  {driver['team']:25s}  {driver['time']:.1f}s")
+
+    print(f"\n📋 YOUR STRATEGY:")
     print(f"   Pit stops: {final_comparison['pit_stops']}")
-    print(f"   Decisions made: {final_comparison['decisions_made']}")
+    for i, pit in enumerate(final_comparison['pit_stop_details'], 1):
+        print(f"   Pit {i}: Lap {pit['lap']} → {pit['compound']} tires")
 
     print(f"\n📋 DECISION TIMELINE:")
     for decision in final_comparison['decision_timeline']:

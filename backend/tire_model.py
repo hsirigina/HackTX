@@ -63,6 +63,7 @@ class TireDegradationModel:
         """
         Get tire wear rate for a given compound and lap number.
         Uses linear interpolation from wear_start to wear_end.
+        EXPONENTIALLY increases degradation beyond max_laps (tire cliff)
 
         Args:
             compound: Tire compound ('SOFT', 'MEDIUM', 'HARD')
@@ -84,9 +85,18 @@ class TireDegradationModel:
             max_laps
         )
 
-        # Clamp lap_number to max_laps
-        idx = min(lap_number - 1, max_laps - 1)
-        return wear_rate[idx]
+        # If within normal tire life, use linear degradation
+        if lap_number <= max_laps:
+            idx = lap_number - 1
+            return wear_rate[idx]
+        else:
+            # Beyond max_laps: EXPONENTIAL tire cliff penalty
+            laps_over = lap_number - max_laps
+            base_degradation = params['wear_end']
+            # Each lap over max adds exponentially more degradation
+            # lap 26 on SOFT: +0.5s, lap 30: +2s, lap 40: +10s per lap!
+            cliff_penalty = base_degradation * (1.5 ** laps_over)
+            return base_degradation + cliff_penalty
 
     def calculate_laptime(
         self,
