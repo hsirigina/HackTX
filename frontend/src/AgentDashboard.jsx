@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
+import TireModal from './TireModal'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'race-session-' + Date.now()
@@ -26,6 +27,7 @@ function AgentDashboard() {
   const [loading, setLoading] = useState(true)
   const [raceFinished, setRaceFinished] = useState(false)
   const [finalResults, setFinalResults] = useState(null)
+  const [isTireModalOpen, setIsTireModalOpen] = useState(false)
 
   // Start race and fetch backend data
   useEffect(() => {
@@ -240,7 +242,7 @@ function AgentDashboard() {
         {/* Left Column - Tire & LapTime Agents */}
         <div className="agents-column">
           {/* Tire Data Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsTireModalOpen(true)} style={{cursor: 'pointer'}}>
             <div className="agent-header">
               <div className="agent-icon">🛞</div>
               <div className="agent-name">TIRE DATA AGENT</div>
@@ -635,6 +637,17 @@ function AgentDashboard() {
           <span>RACE: Bahrain 2024 • POSITION: P{raceState.position} • TIRES: {raceState.tireCompound} ({raceState.tireAge} laps) • STYLE: {raceState.drivingStyle}</span>
         </div>
       </div>
+
+      {/* Tire Modal */}
+      <TireModal 
+        isOpen={isTireModalOpen}
+        onClose={() => setIsTireModalOpen(false)}
+        tireData={{
+          compound: raceState.tireCompound,
+          age: raceState.tireAge,
+          degradation: insights?.tire?.degradation
+        }}
+      />
     </div>
   )
 }
