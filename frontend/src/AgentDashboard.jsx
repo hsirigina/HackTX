@@ -55,6 +55,11 @@ function AgentDashboard() {
   // Load available races on mount
   useEffect(() => {
     loadAvailableRaces()
+
+    // Show loading screen for 3 seconds
+    setTimeout(() => {
+      setInitialLoading(false)
+    }, 3000)
   }, [])
 
   // Poll gesture server for hand gestures
@@ -140,7 +145,6 @@ function AgentDashboard() {
         setSelectedRace(fallbackRaces[0])
       }
       setLoadingRaces(false)
-      setInitialLoading(false)
     } catch (error) {
       console.error('Failed to load races:', error)
       // Fallback races if API fails
@@ -151,7 +155,6 @@ function AgentDashboard() {
       setAvailableRaces(fallbackRaces)
       setSelectedRace(fallbackRaces[0])
       setLoadingRaces(false)
-      setInitialLoading(false)
     }
   }
 
@@ -463,7 +466,16 @@ function AgentDashboard() {
     }
   }
 
-  // Removed loading screen - F1 lights animation serves as the loading screen
+  // Initial loading screen (3 seconds)
+  if (initialLoading) {
+    return (
+      <div className="loading-container">
+        <div className="loading-apex-title"></div>
+        <div className="loading-spinner"></div>
+        <div className="loading-text">INITIALIZING MULTI-AGENT SYSTEM</div>
+      </div>
+    )
+  }
 
   if (showF1Lights) {
     return (

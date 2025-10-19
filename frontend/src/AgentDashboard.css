@@ -101,13 +101,13 @@
 }
 
 .apex-header-title::before {
-  content: 'APE';
+  content: 'Multi-';
   color: #00bfff;
   text-shadow: 0 0 20px rgba(0, 191, 255, 0.8);
 }
 
 .apex-header-title::after {
-  content: 'X';
+  content: 'Lap';
   color: #fff;
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
 }
@@ -2210,13 +2210,13 @@
 }
 
 .loading-apex-title::before {
-  content: 'APE';
+  content: 'Multi-';
   color: #00bfff;
   text-shadow: 0 0 40px rgba(0, 191, 255, 1), 0 0 80px rgba(0, 191, 255, 0.5);
 }
 
 .loading-apex-title::after {
-  content: 'X';
+  content: 'Lap';
   color: #fff;
   text-shadow: 0 0 40px rgba(255, 255, 255, 0.8), 0 0 80px rgba(255, 255, 255, 0.4);
 }
