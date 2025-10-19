@@ -151,10 +151,9 @@ function AgentDashboard() {
   const startRace = async () => {
     if (!selectedRace) return
 
-    setLoading(true)
+    // Hide selection screen and immediately start F1 lights animation
     setShowSelection(false)
-    setInitialLoading(true)
-    const startTime = Date.now()
+    startF1LightsSequence()
 
     try {
       const response = await fetch(`${API_BASE_URL}/api/race/start`, {
@@ -193,28 +192,14 @@ function AgentDashboard() {
         reasoning: `Starting from P${data.state.position} on ${data.state.tireCompound} tires`
       }])
 
-      // Ensure minimum 2 seconds of loading
-      const elapsedTime = Date.now() - startTime
-      const remainingTime = Math.max(0, 2000 - elapsedTime)
-
-      setTimeout(() => {
-        setInitialLoading(false)
-        setLoading(false)
-        // Start F1 lights sequence after loading
-        startF1LightsSequence()
-      }, remainingTime)
     } catch (error) {
       console.error('Failed to start race:', error)
-
-      // Still wait minimum 2 seconds even on error
-      const elapsedTime = Date.now() - startTime
-      const remainingTime = Math.max(0, 2000 - elapsedTime)
-
+      // Show error after lights animation completes
       setTimeout(() => {
         alert('Failed to connect to backend API. Make sure the backend is running on port 8000. Error: ' + error.message)
-        setInitialLoading(false)
-        setLoading(false)
-      }, remainingTime)
+        setShowSelection(true)
+        setShowF1Lights(false)
+      }, 8000)
     }
   }
 
@@ -428,15 +413,7 @@ function AgentDashboard() {
     }
   }
 
-  if (initialLoading && !showSelection) {
-    return (
-      <div className="loading-container">
-        <div className="loading-apex-title"></div>
-        <div className="loading-spinner"></div>
-        <div className="loading-text">INITIALIZING RACE SIMULATION...</div>
-      </div>
-    )
-  }
+  // Removed loading screen - F1 lights animation serves as the loading screen
 
   if (showF1Lights) {
     return (
@@ -677,28 +654,6 @@ function AgentDashboard() {
           <div className="coordinator-header">
             <div className="coord-title">AI COORDINATOR</div>
             <div className="coord-model">Gemini 2.0 Flash</div>
-            {raceStarted && (
-            <button
-              className="live-sim-button"
-              onClick={() => navigate('/livesim')}
-              style={{
-                marginLeft: 'auto',
-                padding: '8px 16px',
-                backgroundColor: '#ff1e00',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-                fontSize: '14px',
-                fontWeight: 'bold',
-                transition: 'all 0.2s'
-              }}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#cc1800'}
-              onMouseOut={(e) => e.target.style.backgroundColor = '#ff1e00'}
-            >
-              🎮 Live Sim
-            </button>
-            )}
           </div>
 
           <div className="lap-display">
@@ -916,22 +871,22 @@ function AgentDashboard() {
                     e.stopPropagation();
                     startRace();
                   }}
-                  disabled={loading || loadingRaces || !selectedRace}
+                  disabled={loadingRaces || !selectedRace}
                   style={{
                     padding: '16px 48px',
                     fontSize: '18px',
                     fontWeight: 'bold',
-                    backgroundColor: (loading || loadingRaces || !selectedRace) ? '#667788' : '#ff1e00',
+                    backgroundColor: (loadingRaces || !selectedRace) ? '#667788' : '#ff1e00',
                     color: 'white',
                     border: 'none',
                     borderRadius: '8px',
-                    cursor: (loading || loadingRaces || !selectedRace) ? 'not-allowed' : 'pointer',
+                    cursor: (loadingRaces || !selectedRace) ? 'not-allowed' : 'pointer',
                     transition: 'all 0.2s',
                     pointerEvents: 'auto',
                     userSelect: 'none'
                   }}
                 >
-                  {loading ? 'Starting Race...' : '🏁 Start Race'}
+                  🏁 Start Race
                 </button>
               </div>
             </div>
