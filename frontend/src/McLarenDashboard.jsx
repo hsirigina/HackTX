@@ -13,6 +13,7 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
   const [userData, setUserData] = useState(null)
   const [competitorData, setCompetitorData] = useState(null)
   const [weatherData, setWeatherData] = useState(null)
+  const [showGlossary, setShowGlossary] = useState(false)
 
   const trackMap = {
     'bahrain': '/tracks/bahrain.svg',
@@ -254,7 +255,25 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             <span className="competitor-icon"><img src="/trackagent.png" alt="Competitor Agent" /></span>
             COMPETITOR ANALYSIS
           </div>
-          <button className="mclaren-close-btn" onClick={handleClose}>✕</button>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <button
+              className="mclaren-help-btn"
+              onClick={(e) => { e.stopPropagation(); setShowGlossary(true); }}
+              style={{
+                padding: '8px 16px',
+                backgroundColor: 'rgba(0, 191, 255, 0.1)',
+                border: '1px solid rgba(0, 191, 255, 0.3)',
+                borderRadius: '4px',
+                color: '#00bfff',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: 'bold'
+              }}
+            >
+              ? HELP
+            </button>
+            <button className="mclaren-close-btn" onClick={handleClose}>✕</button>
+          </div>
         </div>
 
         {/* Main Container */}
@@ -276,13 +295,15 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           </div>
 
           <div className="driver-stats">
-            <div className="stat-line">
+            <div className="stat-line tooltip-wrapper">
               <span className="stat-label">LATITUDE</span>
               <span className="stat-value">{userData?.position_x?.toFixed(3) || '43.730'}</span>
+              <span className="tooltip-text">X-axis position on track</span>
             </div>
-            <div className="stat-line">
+            <div className="stat-line tooltip-wrapper">
               <span className="stat-label">LONGITUDE</span>
               <span className="stat-value">{userData?.position_y?.toFixed(5) || '9.29103'}</span>
+              <span className="tooltip-text">Y-axis position on track</span>
             </div>
           </div>
 
@@ -290,7 +311,7 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             <img src="/1.png" alt="Your Car" />
           </div>
 
-          <div className="safety-status">
+          <div className="safety-status" title="Safety car status and pit recommendation">
             <div className="status-label">ON SAFETY CAR</div>
             <div className="status-action blue">GO TO PIT</div>
           </div>
@@ -299,47 +320,53 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             <div className="fuel-icon blue">⛽</div>
             <div className="fuel-info">
               <div className="fuel-lap">LAP {raceConfig.currentLap || 51}</div>
-              <div className="fuel-bar-container">
+              <div className="fuel-bar-container" title="Remaining fuel level">
                 <div className="fuel-bar blue" style={{width: '60%'}}></div>
               </div>
-              <div className="fuel-status">DRS ON</div>
+              <div className="fuel-status" title="Drag Reduction System status">DRS ON</div>
             </div>
           </div>
 
           <div className="zone-text">In the Zone</div>
 
           <div className="telemetry-row">
-            <div className="telem-box">
+            <div className="telem-box tooltip-wrapper">
               <div className="telem-label">TIRE LIFE</div>
               <div className="telem-value">{raceConfig.raceState?.tireAge || 8} laps</div>
+              <span className="tooltip-text">Number of laps on current tire set</span>
             </div>
-            <div className="telem-box">
+            <div className="telem-box tooltip-wrapper">
               <div className="telem-label">COMPOUND</div>
               <div className="telem-value">{raceConfig.raceState?.tireCompound || 'SOFT'}</div>
+              <span className="tooltip-text">Current tire type (Soft/Medium/Hard)</span>
             </div>
           </div>
 
           <div className="speed-box">
-            <div className="speed-label">TOP LAP SPEED</div>
+            <div className="speed-label tooltip-wrapper">
+              TOP LAP SPEED
+              <span className="tooltip-text">Maximum speed reached this lap</span>
+            </div>
             <div className="speed-big">{userData?.speed_max?.toFixed(0) || '287'}<span>km/h</span></div>
-            <div className="pace-row">
+            <div className="pace-row tooltip-wrapper">
               <span>AVG PACE</span>
               <span>{userData?.speed_avg?.toFixed(0) || '245'}km/h</span>
+              <span className="tooltip-text">Average speed across the lap</span>
             </div>
           </div>
 
           <div className="engine-box">
             <div className="engine-label">ENGINE</div>
-            <div className="engine-gauge">
+            <div className="engine-gauge" title="Current engine mode/power setting">
               <div className="engine-bar blue"></div>
               <div className="engine-number">6</div>
             </div>
             <div className="engine-details">
-              <div className="detail-row">
+              <div className="detail-row" title="Brake usage percentage">
                 <span>BRAKES</span>
                 <div className="detail-bars blue"></div>
               </div>
-              <div className="detail-row">
+              <div className="detail-row" title="Throttle application percentage">
                 <span>THROTTLE</span>
                 <div className="detail-bars blue" style={{width: `${userData?.throttle_avg || 65}%`}}></div>
               </div>
@@ -355,14 +382,19 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
 
           <div className="weather-box" style={{margin: '20px auto', maxWidth: '300px'}}>
             <div className="weather-condition">{weatherData?.rainfall ? 'Rainy' : 'Cloudy'}</div>
-            <div className="temperature">{weatherData?.air_temp?.toFixed(0) || '25'}°<span>C</span></div>
-              <div className="wind-info">
+            <div className="temperature tooltip-wrapper">
+              {weatherData?.air_temp?.toFixed(0) || '25'}°<span>C</span>
+              <span className="tooltip-text">Ambient air temperature</span>
+            </div>
+              <div className="wind-info tooltip-wrapper">
                 <span className="wind-label">WIND</span>
               <span className="wind-value">{weatherData?.wind_speed?.toFixed(1) || '3.5'}m/s ↓</span>
+              <span className="tooltip-text">Wind speed affecting car stability</span>
               </div>
-              <div className="track-temp-info">
+              <div className="track-temp-info tooltip-wrapper">
                 <span className="temp-label">TRACK TEMP</span>
               <span className="temp-value">{weatherData?.track_temp?.toFixed(0) || '45'}°C</span>
+              <span className="tooltip-text">Track surface temp affects tire grip</span>
             </div>
           </div>
 
@@ -389,19 +421,19 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           {/* Blue Section - YOU */}
           <div className="section-grid" style={{marginTop: '30px'}}>
             <div className="tire-section">
-              <div className="section-title">TYRES AND LAPS PACED</div>
+              <div className="section-title" title="Tire wear and usage metrics">TYRES AND LAPS PACED</div>
               <div className="tire-content">
                 <div className="pirelli-logo">Pirelli</div>
-                <div className="tire-circle blue">
+                <div className="tire-circle blue" title="Number of laps on current tire set">
                   <div className="tire-laps">{raceConfig.raceState?.tireAge || 8}</div>
                   <div className="tire-label">LAPS</div>
                 </div>
                 <div className="tire-gauges">
-                  <div className="tire-gauge">
+                  <div className="tire-gauge" title="Left rear tire condition">
                     <div className="gauge-label">L.Rear</div>
                     <div className="gauge-ring"></div>
                   </div>
-                  <div className="tire-gauge">
+                  <div className="tire-gauge" title="Right rear tire condition">
                     <div className="gauge-label">R.Rear</div>
                     <div className="gauge-ring"></div>
                   </div>
@@ -410,16 +442,21 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             </div>
 
             <div className="pit-window-section blue-theme">
-              <div className="window-title blue">NEXT PIT WINDOW LAPS</div>
+              <div className="window-title blue tooltip-wrapper">
+                NEXT PIT WINDOW LAPS
+                <span className="tooltip-text">Optimal laps to pit for tires</span>
+              </div>
               <div className="window-laps blue-bg">36 - 39</div>
               <div className="window-stats">
-                <div className="stat-group">
+                <div className="stat-group tooltip-wrapper">
                   <div className="stat-name blue">PIT STOP TIMES</div>
                   <div className="stat-val blue">3:024 sec</div>
+                  <span className="tooltip-text">Time spent in pit lane</span>
                 </div>
-                <div className="stat-group">
+                <div className="stat-group tooltip-wrapper">
                   <div className="stat-name">OUTLAP</div>
                   <div className="stat-val">21</div>
+                  <span className="tooltip-text">First lap after pit with fresh tires</span>
                 </div>
               </div>
             </div>
@@ -427,27 +464,31 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             <div className="raw-telemetry">
               <div className="section-title">RAW TELEMETRY DATA</div>
               <div className="telemetry-table">
-                <div className="telem-row">
+                <div className="telem-row tooltip-wrapper">
                   <span className="telem-label">vCar</span>
                   <span className="telem-blue">{userData?.speed_avg?.toFixed(1) || '259.3'}</span>
                   <span className="telem-yellow">{competitorData?.speed_avg?.toFixed(1) || '258.4'}</span>
                   <span className="telem-unit">kph</span>
+                  <span className="tooltip-text">Car velocity - average speed</span>
                 </div>
-                <div className="telem-row">
+                <div className="telem-row tooltip-wrapper">
                   <span className="telem-label">Motor</span>
                   <span className="telem-blue">6</span>
                   <span className="telem-yellow">N</span>
+                  <span className="tooltip-text">Engine mode setting</span>
                 </div>
-                <div className="telem-row">
+                <div className="telem-row tooltip-wrapper">
                   <span className="telem-label">Throttle</span>
                   <span className="telem-blue">{userData?.throttle_avg?.toFixed(1) || '100.0'}</span>
                   <span className="telem-yellow">{competitorData?.throttle_avg?.toFixed(1) || '98.5'}</span>
                   <span className="telem-unit">%</span>
+                  <span className="tooltip-text">Throttle pedal position percentage</span>
                 </div>
-                <div className="telem-row">
+                <div className="telem-row tooltip-wrapper">
                   <span className="telem-label">Brake</span>
                   <span className="telem-blue">{userData?.brake_avg?.toFixed(1) || '8.5'}</span>
                   <span className="telem-yellow">{competitorData?.brake_avg?.toFixed(1) || '7.2'}</span>
+                  <span className="tooltip-text">Brake pressure applied</span>
               </div>
             </div>
           </div>
@@ -456,14 +497,14 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           {/* Yellow Section - COMPETITOR */}
           <div className="section-grid reverse" style={{marginTop: '20px'}}>
             <div className="pit-window-section yellow-theme">
-              <div className="window-title yellow">NEXT PIT WINDOW LAPS</div>
+              <div className="window-title yellow" title="Optimal laps to pit for tires">NEXT PIT WINDOW LAPS</div>
               <div className="window-laps yellow-bg">35 - 38</div>
               <div className="window-stats">
-                <div className="stat-group">
+                <div className="stat-group" title="First lap after pit with fresh tires">
                   <div className="stat-name">OUTLAP</div>
                   <div className="stat-val">19</div>
                 </div>
-                <div className="stat-group">
+                <div className="stat-group" title="Time spent in pit lane">
                   <div className="stat-name yellow">PIT STOP TIMES</div>
                   <div className="stat-val yellow">3:174 sec</div>
                 </div>
@@ -471,19 +512,19 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             </div>
 
             <div className="tire-section">
-              <div className="section-title">TIRE PRESSURE AND LIFE</div>
+              <div className="section-title" title="Tire wear and usage metrics">TIRE PRESSURE AND LIFE</div>
               <div className="tire-content reverse">
                 <div className="tire-gauges">
-                  <div className="tire-gauge">
+                  <div className="tire-gauge" title="Left rear tire condition">
                     <div className="gauge-label">L.Rear</div>
                     <div className="gauge-ring"></div>
                   </div>
-                  <div className="tire-gauge">
+                  <div className="tire-gauge" title="Right rear tire condition">
                     <div className="gauge-label">R.Rear</div>
                     <div className="gauge-ring"></div>
                   </div>
                 </div>
-                <div className="tire-circle yellow">
+                <div className="tire-circle yellow" title="Number of laps on current tire set">
                   <div className="tire-laps">11</div>
                   <div className="tire-label">LAPS</div>
                 </div>
@@ -510,11 +551,11 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           </div>
 
           <div className="driver-stats reverse">
-            <div className="stat-line">
+            <div className="stat-line" title="X-axis position on track">
               <span className="stat-value">{competitorData?.position_x?.toFixed(3) || '124.052'}</span>
               <span className="stat-label">LATITUDE</span>
             </div>
-            <div className="stat-line">
+            <div className="stat-line" title="Y-axis position on track">
               <span className="stat-value">{competitorData?.position_y?.toFixed(5) || '9.28070'}</span>
               <span className="stat-label">LONGITUDE</span>
             </div>
@@ -524,7 +565,7 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
             <img src="/2.png" alt="Competitor Car" />
           </div>
 
-          <div className="safety-status reverse">
+          <div className="safety-status reverse" title="Safety car status and pit recommendation">
             <div className="status-action yellow">DO NOT PIT</div>
             <div className="status-label">ON SAFETY CAR</div>
           </div>
@@ -532,10 +573,10 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           <div className="fuel-section reverse">
             <div className="fuel-info">
               <div className="fuel-lap">END</div>
-              <div className="fuel-bar-container">
+              <div className="fuel-bar-container" title="Remaining fuel level">
                 <div className="fuel-bar yellow" style={{width: '90%'}}></div>
               </div>
-              <div className="fuel-status">{competitorData?.drs_available ? 'DRS AVAILABLE' : 'NO DRS'}</div>
+              <div className="fuel-status" title="Drag Reduction System status">{competitorData?.drs_available ? 'DRS AVAILABLE' : 'NO DRS'}</div>
             </div>
             <div className="fuel-icon yellow">⚡</div>
           </div>
@@ -543,20 +584,20 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           <div className="zone-text">Not in the Zone</div>
 
           <div className="telemetry-row reverse">
-            <div className="telem-box">
+            <div className="telem-box" title="Current lap time">
               <div className="telem-label">TIME</div>
               <div className="telem-value">1:23.781</div>
             </div>
-            <div className="telem-box">
+            <div className="telem-box" title="Best lap time this race">
               <div className="telem-label">TIRE LIFE</div>
               <div className="telem-value">1:24.052</div>
             </div>
           </div>
 
           <div className="speed-box">
-            <div className="speed-label">TOP LAP SPEED</div>
+            <div className="speed-label" title="Maximum speed reached this lap">TOP LAP SPEED</div>
             <div className="speed-big">{competitorData?.speed_max?.toFixed(0) || '291'}<span>km/h</span></div>
-            <div className="pace-row">
+            <div className="pace-row" title="Average speed across the lap">
               <span>AVG PACE</span>
               <span>{competitorData?.speed_avg?.toFixed(0) || '248'}km/h</span>
             </div>
@@ -564,16 +605,16 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
 
           <div className="engine-box">
             <div className="engine-label">ENGINE</div>
-            <div className="engine-gauge">
+            <div className="engine-gauge" title="Current engine mode/power setting">
               <div className="engine-bar yellow"></div>
               <div className="engine-number">N<sub>1</sub></div>
             </div>
             <div className="engine-details">
-              <div className="detail-row">
+              <div className="detail-row" title="Brake usage percentage">
                 <span>BRAKES</span>
                 <div className="detail-bars yellow" style={{width: `${competitorData?.brake_avg || 45}%`}}></div>
               </div>
-              <div className="detail-row">
+              <div className="detail-row" title="Throttle application percentage">
                 <span>THROTTLE</span>
                 <div className="detail-bars yellow"></div>
               </div>
@@ -600,13 +641,13 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
           </div>
         </div>
 
-        <div className="timeline-center">
+        <div className="timeline-center" title="Kamm circle - tire grip usage visualization">
           <div className="kamm-title">KAMM DIST</div>
           <div className="kamm-bars">
             {[...Array(60)].map((_, i) => (
-              <div 
-                key={i} 
-                className="kamm-bar" 
+              <div
+                key={i}
+                className="kamm-bar"
                 style={{
                   height: i === 28 ? '50px' : i === 25 ? '40px' : Math.random() > 0.8 ? '15px' : '5px',
                   background: i === 28 ? '#ffd700' : i === 25 ? '#00bfff' : '#3a4555'
@@ -633,6 +674,111 @@ function McLarenDashboard({ isOpen, onClose, raceConfig = {} }) {
         </div>
       </div>
       </div>
+
+      {/* Glossary Modal */}
+      {showGlossary && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 10000,
+            padding: '20px'
+          }}
+          onClick={() => setShowGlossary(false)}
+        >
+          <div
+            style={{
+              backgroundColor: '#1a2332',
+              border: '2px solid #00bfff',
+              borderRadius: '8px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '80vh',
+              overflowY: 'auto',
+              padding: '30px',
+              position: 'relative'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setShowGlossary(false)}
+              style={{
+                position: 'absolute',
+                top: '15px',
+                right: '15px',
+                backgroundColor: 'transparent',
+                border: 'none',
+                color: '#00bfff',
+                fontSize: '24px',
+                cursor: 'pointer',
+                padding: '5px 10px'
+              }}
+            >
+              ✕
+            </button>
+
+            <h2 style={{ color: '#00bfff', marginBottom: '20px', fontSize: '24px' }}>
+              📊 DATA GLOSSARY
+            </h2>
+
+            <div style={{ color: '#fff', fontSize: '14px', lineHeight: '1.6' }}>
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>POSITION & LOCATION</h3>
+                <div style={{ marginBottom: '8px' }}><strong>LATITUDE/LONGITUDE:</strong> X and Y axis position coordinates on track</div>
+                <div style={{ marginBottom: '8px' }}><strong>POSITION:</strong> Current race position (P1-P20)</div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>SPEED METRICS</h3>
+                <div style={{ marginBottom: '8px' }}><strong>TOP LAP SPEED:</strong> Maximum speed reached during the current lap</div>
+                <div style={{ marginBottom: '8px' }}><strong>AVG PACE:</strong> Average speed maintained across the lap</div>
+                <div style={{ marginBottom: '8px' }}><strong>vCar:</strong> Car velocity - average speed measurement</div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>TIRE DATA</h3>
+                <div style={{ marginBottom: '8px' }}><strong>TIRE LIFE:</strong> Number of laps completed on current tire set</div>
+                <div style={{ marginBottom: '8px' }}><strong>COMPOUND:</strong> Current tire type (Soft/Medium/Hard)</div>
+                <div style={{ marginBottom: '8px' }}><strong>L.REAR / R.REAR:</strong> Left and right rear tire condition indicators</div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>CONTROLS</h3>
+                <div style={{ marginBottom: '8px' }}><strong>THROTTLE:</strong> Throttle pedal position percentage (0-100%)</div>
+                <div style={{ marginBottom: '8px' }}><strong>BRAKE:</strong> Brake pressure applied</div>
+                <div style={{ marginBottom: '8px' }}><strong>DRS:</strong> Drag Reduction System - provides speed boost when available</div>
+                <div style={{ marginBottom: '8px' }}><strong>MOTOR/ENGINE:</strong> Current engine mode or power setting</div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>STRATEGY</h3>
+                <div style={{ marginBottom: '8px' }}><strong>PIT WINDOW:</strong> Optimal lap range to pit for fresh tires</div>
+                <div style={{ marginBottom: '8px' }}><strong>PIT STOP TIME:</strong> Total time spent in pit lane during a stop</div>
+                <div style={{ marginBottom: '8px' }}><strong>OUTLAP:</strong> First lap after exiting pits with fresh tires</div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>WEATHER</h3>
+                <div style={{ marginBottom: '8px' }}><strong>AIR TEMP:</strong> Ambient air temperature</div>
+                <div style={{ marginBottom: '8px' }}><strong>TRACK TEMP:</strong> Track surface temperature (affects tire grip)</div>
+                <div style={{ marginBottom: '8px' }}><strong>WIND:</strong> Wind speed affecting car stability and aerodynamics</div>
+              </div>
+
+              <div style={{ marginBottom: '20px' }}>
+                <h3 style={{ color: '#00bfff', fontSize: '16px', marginBottom: '10px' }}>ADVANCED</h3>
+                <div style={{ marginBottom: '8px' }}><strong>KAMM DIST:</strong> Kamm circle - visualization of tire grip usage during cornering and acceleration</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

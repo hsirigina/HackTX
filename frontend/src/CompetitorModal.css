@@ -1,0 +1,641 @@
+/* Competitor Modal Styles */
+.comp-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  backdrop-filter: blur(10px);
+  padding: 20px;
+}
+
+.comp-modal-container {
+  background: linear-gradient(135deg, #0d1117 0%, #1a2332 50%, #0d1117 100%);
+  border: 2px solid rgba(0, 191, 255, 0.3);
+  border-radius: 12px;
+  max-width: 1400px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 0 50px rgba(0, 191, 255, 0.2);
+  font-family: 'Rajdhani', sans-serif;
+  color: #fff;
+}
+
+.comp-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 30px;
+  border-bottom: 2px solid rgba(0, 191, 255, 0.2);
+  background: rgba(0, 191, 255, 0.05);
+}
+
+.comp-modal-title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #00bfff;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+}
+
+.comp-close-btn {
+  background: transparent;
+  border: 2px solid rgba(0, 191, 255, 0.3);
+  color: #00bfff;
+  font-size: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s;
+}
+
+.comp-close-btn:hover {
+  background: rgba(0, 191, 255, 0.2);
+  border-color: #00bfff;
+  transform: rotate(90deg);
+}
+
+.comp-modal-content {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+  padding: 25px;
+}
+
+.comp-driver-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.comp-center-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comp-section-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #00bfff;
+  letter-spacing: 2px;
+  text-align: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0, 191, 255, 0.2);
+  margin-bottom: 5px;
+}
+
+.comp-section-sublabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #889aab;
+  letter-spacing: 1.5px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Tooltip Styles */
+.comp-tooltip {
+  position: relative;
+  cursor: help;
+  padding: 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.comp-tooltip:hover {
+  background: rgba(0, 191, 255, 0.05);
+}
+
+.comp-tooltip-text {
+  visibility: hidden;
+  opacity: 0;
+  background: rgba(0, 191, 255, 0.95);
+  color: #0d1117;
+  text-align: center;
+  padding: 10px 15px;
+  border-radius: 6px;
+  position: absolute;
+  z-index: 10000;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 600;
+  transition: opacity 0.3s, visibility 0.3s;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0, 191, 255, 0.4);
+  margin-bottom: 8px;
+}
+
+.comp-tooltip-text::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -6px;
+  border-width: 6px;
+  border-style: solid;
+  border-color: rgba(0, 191, 255, 0.95) transparent transparent transparent;
+}
+
+.comp-tooltip:hover .comp-tooltip-text {
+  visibility: visible;
+  opacity: 1;
+}
+
+/* Stat Components */
+.comp-stat-large {
+  text-align: center;
+  padding: 15px;
+  background: rgba(0, 191, 255, 0.05);
+  border: 2px solid rgba(0, 191, 255, 0.3);
+  border-radius: 8px;
+}
+
+.comp-stat-value-huge {
+  font-size: 48px;
+  font-weight: 900;
+  line-height: 1;
+  margin-top: 8px;
+}
+
+.comp-stat-value-huge.blue {
+  color: #00bfff;
+  text-shadow: 0 0 20px rgba(0, 191, 255, 0.5);
+}
+
+.comp-stat-value-huge.yellow {
+  color: #ffd700;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.5);
+}
+
+.comp-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(13, 17, 23, 0.6);
+  border: 1px solid rgba(136, 154, 171, 0.2);
+  border-radius: 6px;
+}
+
+.comp-stat-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #889aab;
+  letter-spacing: 1px;
+}
+
+.comp-stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.comp-stat-box {
+  padding: 12px;
+  background: rgba(13, 17, 23, 0.6);
+  border-radius: 6px;
+  text-align: center;
+}
+
+.comp-stat-box.blue-border {
+  border: 2px solid rgba(0, 191, 255, 0.3);
+}
+
+.comp-stat-box.yellow-border {
+  border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.comp-stat-value-big {
+  font-size: 28px;
+  font-weight: 900;
+  color: #00bfff;
+  margin-top: 8px;
+}
+
+/* Weather Section */
+.comp-weather-box {
+  background: rgba(0, 191, 255, 0.05);
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.comp-weather-condition {
+  font-size: 18px;
+  font-weight: 700;
+  color: #00bfff;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+.comp-weather-stat {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(136, 154, 171, 0.1);
+}
+
+.comp-weather-label {
+  font-size: 11px;
+  color: #889aab;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.comp-weather-value {
+  font-size: 14px;
+  color: #fff;
+  font-weight: 700;
+}
+
+/* Telemetry Section */
+.comp-telemetry-section {
+  background: rgba(13, 17, 23, 0.8);
+  border: 1px solid rgba(136, 154, 171, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+}
+
+.comp-telem-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 1fr 50px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+  margin-bottom: 8px;
+}
+
+.comp-telem-row:last-child {
+  margin-bottom: 0;
+}
+
+.comp-telem-label {
+  font-size: 11px;
+  color: #889aab;
+  font-weight: 600;
+}
+
+.comp-telem-blue {
+  font-size: 14px;
+  color: #00bfff;
+  font-weight: 700;
+  text-align: center;
+}
+
+.comp-telem-yellow {
+  font-size: 14px;
+  color: #ffd700;
+  font-weight: 700;
+  text-align: center;
+}
+
+.comp-telem-unit {
+  font-size: 10px;
+  color: #667788;
+  text-align: right;
+}
+
+/* Pit Window */
+.comp-pit-window {
+  background: rgba(0, 191, 255, 0.05);
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+.comp-pit-laps {
+  font-size: 24px;
+  font-weight: 900;
+  color: #00bfff;
+  margin-top: 10px;
+}
+
+/* Car and Fuel Container */
+.comp-car-fuel-container {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 10px 0;
+}
+
+/* Car Display */
+.comp-car-display {
+  flex: 1;
+  text-align: center;
+  background: linear-gradient(135deg, rgba(0, 191, 255, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 191, 255, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.comp-car-display::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #00bfff, transparent);
+}
+
+.comp-car-display img {
+  width: 100%;
+  max-width: 130px;
+  height: auto;
+  filter: drop-shadow(0 4px 12px rgba(0, 191, 255, 0.4));
+  transition: transform 0.3s;
+}
+
+.comp-car-display:hover img {
+  transform: scale(1.05);
+}
+
+.comp-driver-section:last-child .comp-car-display {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(0, 0, 0, 0.4) 100%);
+  border-color: rgba(255, 215, 0, 0.15);
+}
+
+.comp-driver-section:last-child .comp-car-display::before {
+  background: linear-gradient(90deg, transparent, #ffd700, transparent);
+}
+
+.comp-driver-section:last-child .comp-car-display img {
+  filter: drop-shadow(0 4px 12px rgba(255, 215, 0, 0.4));
+}
+
+/* Vertical Fuel Bar */
+.comp-fuel-vertical {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 12px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(136, 154, 171, 0.2);
+}
+
+.comp-fuel-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: #889aab;
+  letter-spacing: 1px;
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+}
+
+.comp-fuel-bar-vertical {
+  width: 20px;
+  height: 120px;
+  background: rgba(136, 154, 171, 0.2);
+  border-radius: 10px;
+  position: relative;
+  overflow: hidden;
+  border: 2px solid rgba(136, 154, 171, 0.3);
+}
+
+.comp-fuel-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  transition: height 0.5s ease;
+  border-radius: 8px;
+}
+
+.comp-fuel-fill.blue {
+  background: linear-gradient(to top, #00bfff, #0080ff);
+  box-shadow: 0 0 15px rgba(0, 191, 255, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.comp-fuel-fill.yellow {
+  background: linear-gradient(to top, #ffd700, #ffaa00);
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.6), inset 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.comp-fuel-percentage {
+  font-size: 11px;
+  font-weight: 700;
+  color: #00bfff;
+}
+
+.comp-driver-section:last-child .comp-fuel-percentage {
+  color: #ffd700;
+}
+
+.comp-fuel-icon-small {
+  font-size: 18px;
+}
+
+.comp-fuel-icon-small.blue {
+  color: #00bfff;
+  filter: drop-shadow(0 0 8px rgba(0, 191, 255, 0.6));
+}
+
+.comp-fuel-icon-small.yellow {
+  color: #ffd700;
+  filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.6));
+}
+
+.comp-drs-indicator {
+  font-size: 8px;
+  font-weight: 700;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.comp-drs-indicator.blue {
+  background: rgba(0, 191, 255, 0.2);
+  color: #00bfff;
+  border: 1px solid rgba(0, 191, 255, 0.4);
+}
+
+.comp-drs-indicator.yellow {
+  background: rgba(255, 215, 0, 0.2);
+  color: #ffd700;
+  border: 1px solid rgba(255, 215, 0, 0.4);
+}
+
+/* Fuel Section */
+.comp-fuel-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  margin: 10px 0;
+}
+
+.comp-fuel-icon {
+  font-size: 24px;
+}
+
+.comp-fuel-icon.blue {
+  color: #00bfff;
+}
+
+.comp-fuel-icon.yellow {
+  color: #ffd700;
+}
+
+.comp-fuel-bar-container {
+  flex: 1;
+  height: 12px;
+  background: rgba(136, 154, 171, 0.2);
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+}
+
+.comp-fuel-bar {
+  height: 100%;
+  transition: width 0.3s;
+  border-radius: 6px;
+}
+
+.comp-fuel-bar.blue {
+  background: linear-gradient(90deg, #00bfff, #0080ff);
+  box-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+}
+
+.comp-fuel-bar.yellow {
+  background: linear-gradient(90deg, #ffd700, #ffaa00);
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+}
+
+.comp-fuel-status {
+  font-size: 11px;
+  font-weight: 700;
+  color: #889aab;
+  white-space: nowrap;
+}
+
+/* Telemetry Chart */
+.comp-telemetry-chart {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(136, 154, 171, 0.2);
+}
+
+.comp-chart-svg {
+  width: 100%;
+  height: auto;
+}
+
+.comp-chart-legend {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Tire Visualization */
+.comp-tire-visual {
+  background: rgba(0, 191, 255, 0.05);
+  border: 1px solid rgba(0, 191, 255, 0.2);
+  border-radius: 8px;
+  padding: 15px;
+  margin-top: 15px;
+}
+
+.comp-tire-row {
+  display: flex;
+  gap: 15px;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.comp-tire-box {
+  flex: 1;
+  text-align: center;
+  padding: 15px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.comp-tire-box.blue-tire {
+  border: 2px solid rgba(0, 191, 255, 0.3);
+}
+
+.comp-tire-box.yellow-tire {
+  border: 2px solid rgba(255, 215, 0, 0.3);
+}
+
+.comp-tire-circle {
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 10px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(0, 191, 255, 0.1), transparent);
+  border: 3px solid rgba(0, 191, 255, 0.4);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.comp-tire-box.yellow-tire .comp-tire-circle {
+  background: radial-gradient(circle, rgba(255, 215, 0, 0.1), transparent);
+  border-color: rgba(255, 215, 0, 0.4);
+}
+
+.comp-tire-laps {
+  font-size: 24px;
+  font-weight: 900;
+  color: #00bfff;
+}
+
+.comp-tire-box.yellow-tire .comp-tire-laps {
+  color: #ffd700;
+}
+
+.comp-tire-label {
+  font-size: 9px;
+  color: #889aab;
+  letter-spacing: 1px;
+}
+
+.comp-tire-name {
+  font-size: 11px;
+  font-weight: 700;
+  color: #889aab;
+  margin-top: 8px;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .comp-modal-content {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+}

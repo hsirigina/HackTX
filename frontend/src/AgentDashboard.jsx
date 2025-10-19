@@ -3,7 +3,7 @@ import './AgentDashboard.css'
 import TireModal from './TireModal'
 import LaptimeModal from './LaptimeModal'
 import PositionModal from './PositionModal'
-import McLarenDashboard from './McLarenDashboard'
+import CompetitorModal from './CompetitorModal'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'race-session-' + Date.now()
@@ -1146,7 +1146,7 @@ function AgentDashboard() {
       />
 
       {/* Competitor Modal */}
-      <McLarenDashboard
+      <CompetitorModal
         isOpen={isCompetitorModalOpen}
         onClose={() => setIsCompetitorModalOpen(false)}
         raceConfig={{
