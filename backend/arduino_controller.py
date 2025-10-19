@@ -1,177 +1,154 @@
 """
-Arduino Driver Display Controller
-Controls the Arduino LCD display via serial communication.
+Arduino Controller - Simplified interface for sending commands to driver display
+Use this from your gesture system or race monitor
 """
-import serial
-import serial.tools.list_ports
-import time
+
+import os
+from supabase import create_client
+from dotenv import load_dotenv
 from typing import Optional
+import time
+
+load_dotenv()
 
 
 class ArduinoController:
-    """Controls Arduino driver display via serial."""
-
-    def __init__(self, port: Optional[str] = None, baud: int = 9600):
+    """Controller for sending messages to driver display via Supabase"""
+    
+    def __init__(self, race_id: str = None):
         """
-        Initialize Arduino controller.
-
+        Initialize Arduino controller
+        
         Args:
-            port: Serial port (e.g., '/dev/ttyUSB0', 'COM3')
-                  If None, will try to auto-detect Arduino
-            baud: Baud rate (default 9600)
+            race_id: Unique race identifier (e.g., 'monaco_2024')
         """
-        self.port = port or self._auto_detect_arduino()
-        self.baud = baud
-        self.ser = None
-
-        if self.port:
-            self._connect()
-        else:
-            print("⚠️  No Arduino detected. Display commands will be logged only.")
-
-    def _auto_detect_arduino(self) -> Optional[str]:
-        """Auto-detect Arduino on serial ports."""
-        ports = serial.tools.list_ports.comports()
-
-        for port in ports:
-            # Look for Arduino
-            if 'Arduino' in port.description or 'USB Serial' in port.description:
-                print(f"✓ Found Arduino on {port.device}")
-                return port.device
-
-        return None
-
-    def _connect(self):
-        """Connect to Arduino."""
+        supabase_url = os.getenv('SUPABASE_URL')
+        supabase_key = os.getenv('SUPABASE_KEY')
+        
+        if not supabase_url or not supabase_key:
+            raise ValueError("SUPABASE_URL and SUPABASE_KEY must be set in .env")
+        
+        self.supabase = create_client(supabase_url, supabase_key)
+        self.race_id = race_id or f"race_{int(time.time())}"
+    
+    def send_message(self, message_type: str, content: dict, priority: int = 0):
+        """
+        Send a message to driver display
+        
+        Args:
+            message_type: Type of message ('PIT_NOW', 'ENGINEER_ALERT', 'STRATEGY', etc.)
+            content: Message content as dict
+            priority: Priority level (0-10, higher = more urgent)
+        """
         try:
-            self.ser = serial.Serial(self.port, self.baud, timeout=1)
-            time.sleep(2)  # Wait for Arduino reset
-            print(f"✓ Connected to Arduino on {self.port}")
-        except serial.SerialException as e:
-            print(f"⚠️  Could not connect to Arduino: {e}")
-            self.ser = None
+            result = self.supabase.table('driver_display').insert({
+                'race_id': self.race_id,
+                'message_type': message_type,
+                'content': content,
+                'priority': priority,
+                'acknowledged': False
+            }).execute()
+            return result.data[0] if result.data else None
+        except Exception as e:
+            print(f"Error sending message: {e}")
+            return None
+    
+    def send_pit_now(self, lap: Optional[int] = None, compound: str = "MEDIUM"):
+        """Send urgent pit stop command (will trigger buzzer)"""
+        return self.send_message(
+            'PIT_NOW',
+            {
+                'message': 'PIT NOW - BOX BOX BOX',
+                'lap': lap,
+                'compound': compound
+            },
+            priority=10
+        )
+    
+    def send_pit_countdown(self, laps: int):
+        """Send pit countdown"""
+        return self.send_message(
+            'PIT_COUNTDOWN',
+            {
+                'laps': laps,
+                'message': f'Pit in {laps} laps'
+            },
+            priority=7
+        )
+    
+    def send_strategy_update(self, strategy_name: str, details: str):
+        """Send strategy update (no buzzer)"""
+        return self.send_message(
+            'STRATEGY',
+            {
+                'strategy': strategy_name,
+                'message': details
+            },
+            priority=3
+        )
+    
+    def send_lap_update(self, current_lap: int, total_laps: int, position: str, gap: str):
+        """Send lap update"""
+        return self.send_message(
+            'LAP_UPDATE',
+            {
+                'current_lap': current_lap,
+                'total_laps': total_laps,
+                'position': position,
+                'gap': gap
+            },
+            priority=1
+        )
+    
+    def clear_display(self):
+        """Clear display to monitoring state"""
+        return self.send_message(
+            'CLEAR',
+            {'message': 'Return to monitoring'},
+            priority=0
+        )
+    
+    def get_recent_messages(self, limit: int = 10):
+        """Get recent messages"""
+        try:
+            result = self.supabase.table('driver_display')\
+                .select('*')\
+                .eq('race_id', self.race_id)\
+                .order('created_at', desc=True)\
+                .limit(limit)\
+                .execute()
+            return result.data
+        except Exception as e:
+            print(f"Error fetching messages: {e}")
+            return []
 
-    def send_command(self, command: str, value: str = ""):
-        """
-        Send command to Arduino.
 
-        Args:
-            command: Command name
-            value: Command value
-        """
-        if value:
-            msg = f"{command}:{value}\n"
-        else:
-            msg = f"{command}\n"
-
-        if self.ser and self.ser.is_open:
-            try:
-                self.ser.write(msg.encode())
-                print(f"  → Arduino: {msg.strip()}")
-            except serial.SerialException as e:
-                print(f"⚠️  Serial error: {e}")
-        else:
-            print(f"  → Arduino (offline): {msg.strip()}")
-
-    # Convenience methods
-    def update_lap(self, current: int, total: int):
-        """Update lap counter."""
-        self.send_command("LAP", f"{current}/{total}")
-
-    def update_position(self, position: int):
-        """Update driver position."""
-        self.send_command("POSITION", str(position))
-
-    def update_gap(self, gap: float):
-        """Update gap to car behind/ahead."""
-        sign = "+" if gap >= 0 else ""
-        self.send_command("GAP", f"{sign}{gap:.1f}")
-
-    def set_tire_status(self, status: str):
-        """Set tire status: OK, WARN, or CRITICAL."""
-        self.send_command("TIRE_STATUS", status)
-
-    def set_strategy(self, strategy_id: str):
-        """Set current strategy (A, B, C, etc.)."""
-        self.send_command("STRATEGY", strategy_id)
-
-    def set_pit_countdown(self, laps: int):
-        """Set pit countdown timer."""
-        self.send_command("PIT_COUNTDOWN", str(laps))
-
-    def pit_now(self):
-        """Trigger urgent pit now alert."""
-        self.send_command("URGENT", "PIT_NOW")
-
-    def stay_out(self):
-        """Trigger stay out alert (cancel pit)."""
-        self.send_command("URGENT", "STAY_OUT")
-
-    def analyzing(self):
-        """Show team analyzing status."""
-        self.send_command("URGENT", "ANALYZE")
-
-    def clear(self):
-        """Return to normal monitoring."""
-        self.send_command("CLEAR")
-
-    def close(self):
-        """Close serial connection."""
-        if self.ser and self.ser.is_open:
-            self.ser.close()
-            print("✓ Arduino connection closed")
-
-
-# Demo/Test script
+# Example usage
 if __name__ == "__main__":
+    controller = ArduinoController(race_id='monaco_2024_test')
+    
+    print("Arduino Controller Test")
     print("=" * 60)
-    print("Arduino Driver Display Test")
-    print("=" * 60)
-
-    # Initialize controller
-    arduino = ArduinoController()
-
-    if not arduino.ser:
-        print("\n⚠️  No Arduino connected. Running in simulation mode.")
-        print("Commands will be printed but not sent to hardware.\n")
-
-    # Simulate race sequence
-    print("\n🎬 Simulating race sequence...\n")
-
-    # Normal racing
-    print("1. Normal racing")
-    arduino.update_lap(10, 78)
-    arduino.update_position(2)
-    arduino.update_gap(1.2)
-    arduino.set_tire_status("OK")
-    time.sleep(3)
-
-    # Pit strategy decided
-    print("\n2. Pit strategy decided")
-    arduino.set_strategy("A")
-    arduino.set_pit_countdown(5)
+    
+    # Test sequence
+    print("\n1. Sending lap update...")
+    controller.send_lap_update(65, 78, 'P1', '+2.3')
     time.sleep(2)
-
-    # Countdown
-    print("\n3. Countdown to pit")
-    for i in range(5, 0, -1):
-        arduino.set_pit_countdown(i)
-        time.sleep(2)
-
-    # Pit now
-    print("\n4. Pit window open")
-    arduino.pit_now()
-    time.sleep(3)
-
-    # Back to racing
-    print("\n5. Back to racing")
-    arduino.clear()
-    arduino.update_lap(16, 78)
+    
+    print("\n2. Sending pit countdown...")
+    controller.send_pit_countdown(3)
     time.sleep(2)
-
-    # Close connection
-    arduino.close()
-
-    print("\n" + "=" * 60)
-    print("✅ Test complete!")
-    print("=" * 60)
+    
+    print("\n3. Sending PIT NOW (will buzz)...")
+    controller.send_pit_now(lap=68, compound='SOFT')
+    time.sleep(3)
+    
+    print("\n4. Clearing display...")
+    controller.clear_display()
+    
+    print("\n5. Recent messages:")
+    messages = controller.get_recent_messages(5)
+    for msg in messages:
+        print(f"   - {msg['message_type']}: {msg['content']}")
+    
+    print("\n✅ Test complete!")
