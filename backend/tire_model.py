@@ -12,23 +12,24 @@ class TireDegradationModel:
     """
 
     # Tire compound characteristics (degradation rate in seconds/lap)
+    # Tuned to match Bahrain 2024 pace (VER avg: 96.57s)
     COMPOUND_WEAR_RATES = {
         'SOFT': {
-            'initial_laptime': 97.0,  # seconds
-            'wear_start': 0.04,  # seconds/lap at start
-            'wear_end': 0.20,    # seconds/lap at end of life
+            'initial_laptime': 96.0,  # seconds - fastest compound
+            'wear_start': 0.02,  # seconds/lap at start (reduced for realism)
+            'wear_end': 0.15,    # seconds/lap at end of life (reduced)
             'max_laps': 25       # typical max stint length
         },
         'MEDIUM': {
-            'initial_laptime': 97.8,
-            'wear_start': 0.04,
-            'wear_end': 0.12,
+            'initial_laptime': 96.3,  # slightly slower than SOFT
+            'wear_start': 0.02,
+            'wear_end': 0.08,    # less degradation than SOFT
             'max_laps': 40
         },
         'HARD': {
-            'initial_laptime': 98.5,
-            'wear_start': 0.03,
-            'wear_end': 0.08,
+            'initial_laptime': 96.5,  # slowest but most durable
+            'wear_start': 0.01,
+            'wear_end': 0.05,    # minimal degradation
             'max_laps': 60
         }
     }

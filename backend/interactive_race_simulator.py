@@ -65,20 +65,21 @@ class InteractiveRaceSimulator:
     Uses tire model + competitor analysis to create realistic options
     """
 
-    def __init__(self, race_year: int, race_name: str, total_laps: int, comparison_driver: str = 'VER'):
+    def __init__(self, race_year: int, race_name: str, total_laps: int = None, comparison_driver: str = 'VER', demo_mode: bool = False):
         """
         Initialize race simulator
 
         Args:
             race_year: Year (e.g., 2024)
             race_name: Race name (e.g., 'Bahrain')
-            total_laps: Total race laps (e.g., 57 for Bahrain)
+            total_laps: Total race laps (e.g., 57 for Bahrain). If None, auto-detected from race data.
             comparison_driver: Driver to compare against (default: Verstappen)
+            demo_mode: If True, only offer critical decisions (~5-8 total instead of 25)
         """
         self.race_year = race_year
         self.race_name = race_name
-        self.total_laps = total_laps
         self.comparison_driver = comparison_driver
+        self.demo_mode = demo_mode
 
         # Load actual race data for competitor positions
         print(f"📥 Loading {race_year} {race_name} race data...")
@@ -88,19 +89,29 @@ class InteractiveRaceSimulator:
         # Get comparison driver's actual race
         self.comparison_laps = self.session.laps.pick_driver(comparison_driver)
 
+        # Store all race data for position calculations
+        self.race_data = self.session.laps
+
         # Use SUM of lap times, not cumulative time (which includes formation lap + delays)
         self.comparison_laptimes = self.comparison_laps['LapTime'].dt.total_seconds()
         self.comparison_total_time = self.comparison_laptimes.sum()
         self.comparison_avg_laptime = self.comparison_laptimes.mean()
 
-        print(f"   ✅ {comparison_driver} total race time: {self.comparison_total_time:.1f}s ({len(self.comparison_laptimes)} laps)")
+        # Auto-detect total laps if not provided
+        if total_laps is None:
+            self.total_laps = len(self.comparison_laptimes)
+        else:
+            self.total_laps = total_laps
+
+        print(f"   ✅ {comparison_driver} total race time: {self.comparison_total_time:.1f}s ({self.total_laps} laps)")
         print(f"   ✅ {comparison_driver} average lap time: {self.comparison_avg_laptime:.2f}s")
 
         # Initialize race state (user starts on grid)
         self.state = None  # Will be set in start_race()
 
-        # Decision points (laps where we'll pause for user input)
-        self.decision_laps = self._calculate_decision_points()
+        # Decision points are now DYNAMIC - calculated in real-time based on tire state
+        # No more hardcoded decision laps!
+        self.decision_laps = None
 
         # Tire model and driving style
         self.tire_model = None  # Created when race starts with initial style
@@ -153,29 +164,86 @@ class InteractiveRaceSimulator:
             'comparison_time': self.comparison_total_time
         }
 
-    def _calculate_decision_points(self) -> List[int]:
+    def should_offer_decision(self, lap_number: int) -> bool:
         """
-        Calculate which laps to pause for user decisions
-        Based on typical F1 strategy windows
+        Check if we should offer a decision at this lap (DYNAMIC!)
+
+        In DEMO MODE (~5-8 decisions):
+        - Lap 1 (initial setup)
+        - When tire reaches 85% of max laps (approaching cliff)
+        - When past tire cliff
+        - One final lap decision
+
+        In FULL MODE (~25 decisions):
+        - Lap 1 (initial setup)
+        - Tire age >= 40% of max laps (every lap in mid-stint)
+        - Tire age >= 70% (approaching cliff, every lap)
+        - Past tire cliff (100%+)
+        - Last 3 laps
+        - Every 10 laps for tactical adjustments
+
+        This replaces the old hardcoded decision_laps list!
         """
-        decision_laps = []
+        if lap_number == 1:
+            return True  # Always offer initial decision
 
-        # Lap 1: Initial driving style choice
-        decision_laps.append(1)
+        if not self.state:
+            return False
 
-        # First pit window (laps 10-15)
-        decision_laps.extend([10, 12, 15])
+        # Calculate tire state
+        max_laps = self.tire_model.COMPOUND_WEAR_RATES[self.state.tire_compound]['max_laps']
+        tire_age_pct = self.state.tire_age / max_laps
+        laps_remaining = self.total_laps - lap_number
 
-        # Mid-race tactics (laps 20-30)
-        decision_laps.extend([20, 25, 30])
+        if self.demo_mode:
+            # DEMO MODE: Only offer critical decisions (~5-8 total)
+            # Offer pit decisions only at 85% and 100% tire life (not every lap!)
 
-        # Second pit window (laps 33-38)
-        decision_laps.extend([33, 35, 38])
+            # Check if we offered a decision in last 3 laps (avoid spam)
+            recent_decision = False
+            if len(self.state.decisions_made) > 0:
+                last_decision_lap = self.state.decisions_made[-1].get('lap', 0)
+                if lap_number - last_decision_lap < 3:
+                    recent_decision = True
 
-        # Final stint decisions (laps 45-55)
-        decision_laps.extend([45, 50, 55])
+            # CRITICAL: Past tire cliff - must pit NOW (but only offer once)
+            if tire_age_pct >= 1.0 and tire_age_pct < 1.05 and not recent_decision:
+                return True
 
-        return sorted(decision_laps)
+            # URGENT: At 85-87% of tire life - offer pit window (once)
+            if tire_age_pct >= 0.85 and tire_age_pct < 0.87 and not recent_decision:
+                return True
+
+            # FINAL: Last lap only
+            if laps_remaining == 0:
+                return True
+
+            return False
+
+        else:
+            # FULL MODE: Offer many decisions for detailed strategy
+
+            # CRITICAL: Past tire cliff
+            if tire_age_pct >= 1.0:
+                return True
+
+            # URGENT: Approaching cliff (70%+)
+            if tire_age_pct >= 0.70:
+                return True
+
+            # STRATEGIC: Mid-stint (40%+) and at least 10 laps old
+            if tire_age_pct >= 0.40 and self.state.tire_age >= 10:
+                return True
+
+            # FINAL: Last 3 laps
+            if laps_remaining <= 3:
+                return True
+
+            # TACTICAL: Every 10 laps for driving style
+            if lap_number % 10 == 0:
+                return True
+
+            return False
 
     def simulate_lap(self, lap_number: int) -> Tuple[float, Dict]:
         """
@@ -216,7 +284,7 @@ class InteractiveRaceSimulator:
     def generate_decision_options(self, lap_number: int) -> List[DecisionOption]:
         """
         Generate 3 strategic options for user to choose from
-        Uses tire model + competitor data
+        Uses tire model + competitor data - FULLY DYNAMIC!
 
         Args:
             lap_number: Current lap number
@@ -229,22 +297,41 @@ class InteractiveRaceSimulator:
         # Get competitor context
         competitor_status = self._get_competitor_context(lap_number)
 
-        # Determine decision type based on lap
+        # Calculate tire state (DYNAMIC!)
+        max_laps = self.tire_model.COMPOUND_WEAR_RATES[self.state.tire_compound]['max_laps']
+        tire_age_pct = self.state.tire_age / max_laps
+        laps_remaining = self.total_laps - lap_number
+
+        # Decision priority (state-based, NOT lap-based):
+        # 1. CRITICAL: Past tire cliff (100%+ of max laps)
+        # 2. URGENT: Approaching tire cliff (70%+ of max laps)
+        # 3. STRATEGIC: Early/mid race tire decisions (40-70%)
+        # 4. TACTICAL: Driving style adjustments (any time)
+        # 5. FINAL: Last 3 laps (go for broke)
+
         if lap_number == 1:
             # Initial driving style decision
             options = self._generate_driving_style_options(lap_number, competitor_status)
 
-        elif lap_number in [10, 12, 15, 33, 35, 38]:
-            # Pit stop windows
+        elif tire_age_pct >= 1.0:
+            # CRITICAL: PAST TIRE CLIFF - MUST PIT NOW!
             options = self._generate_pit_stop_options(lap_number, competitor_status)
 
-        elif lap_number in [20, 25, 30, 45, 50]:
-            # Tactical decisions (driving style + push/conserve)
-            options = self._generate_tactical_options(lap_number, competitor_status)
+        elif tire_age_pct >= 0.70:
+            # URGENT: Approaching cliff - pit window open
+            options = self._generate_pit_stop_options(lap_number, competitor_status)
 
-        elif lap_number == 55:
-            # Final laps - attack or manage?
+        elif tire_age_pct >= 0.40 and self.state.tire_age >= 10:
+            # STRATEGIC: Mid-stint - should we extend or pit early?
+            options = self._generate_pit_stop_options(lap_number, competitor_status)
+
+        elif laps_remaining <= 3:
+            # FINAL: Last 3 laps - attack or conserve?
             options = self._generate_final_laps_options(lap_number, competitor_status)
+
+        elif lap_number % 10 == 0:
+            # TACTICAL: Every 10 laps, offer driving style adjustment
+            options = self._generate_tactical_options(lap_number, competitor_status)
 
         # Ensure we always return exactly 3 options
         return options[:3]
@@ -280,8 +367,82 @@ class InteractiveRaceSimulator:
         options = []
         laps_remaining = self.total_laps - lap_number
 
-        # Option 1: PIT NOW for MEDIUM tires
+        # FIX 1: Check tire cliff hard limit (70% of max laps)
+        max_laps = self.tire_model.COMPOUND_WEAR_RATES[self.state.tire_compound]['max_laps']
+        approaching_cliff = self.state.tire_age >= (max_laps * 0.70)  # 70% threshold matches should_offer_decision
+        past_cliff = self.state.tire_age >= max_laps
+
+        # Calculate all pit options first to find the best one
         pit_now_medium = self._calculate_pit_impact(lap_number, 'MEDIUM', laps_remaining)
+        pit_now_hard = self._calculate_pit_impact(lap_number, 'HARD', laps_remaining)
+        stay_out = self._calculate_stay_out_impact(lap_number, 3, laps_remaining)
+
+        # Find the BEST option (lowest race time impact)
+        all_impacts = [
+            ('PIT_MEDIUM', pit_now_medium['race_time_impact']),
+            ('PIT_HARD', pit_now_hard['race_time_impact']),
+            ('STAY_OUT', stay_out['race_time_impact'])
+        ]
+        all_impacts.sort(key=lambda x: x[1])  # Sort by time impact
+        best_option = all_impacts[0][0]
+
+        # Set confidence based on tire state AND which option is best
+        if past_cliff:
+            # CRITICAL: Past cliff - pitting is HIGHLY_RECOMMENDED, staying out is NOT
+            if best_option == 'PIT_MEDIUM':
+                pit_now_medium['confidence'] = 'HIGHLY_RECOMMENDED'
+                pit_now_hard['confidence'] = 'RECOMMENDED'
+            else:  # PIT_HARD is best
+                pit_now_hard['confidence'] = 'HIGHLY_RECOMMENDED'
+                pit_now_medium['confidence'] = 'RECOMMENDED'
+            stay_out['confidence'] = 'NOT_RECOMMENDED'
+            stay_out['reasoning'] = f'DANGER! Already past tire cliff ({self.state.tire_age}/{max_laps} laps) - staying out will destroy tires'
+            stay_out['cons'].append(f'TIRE CLIFF PENALTY: +{int((self.state.tire_age - max_laps) * 50)}s per lap!')
+
+        elif approaching_cliff:
+            # URGENT: Approaching cliff (70-100%) - recommend best pit option
+            if best_option == 'STAY_OUT' and stay_out['race_time_impact'] < 0:
+                # Staying out is actually still faster (negative impact) - but warn about tire cliff
+                stay_out['confidence'] = 'RECOMMENDED'
+                stay_out['reasoning'] = f'Still faster to extend stint (-{abs(stay_out["race_time_impact"]):.1f}s), but WARNING: tire cliff in {max_laps - self.state.tire_age} laps'
+                # Pitting is slower but safer
+                if pit_now_hard['race_time_impact'] < pit_now_medium['race_time_impact']:
+                    pit_now_hard['confidence'] = 'ALTERNATIVE'
+                    pit_now_medium['confidence'] = 'ALTERNATIVE'
+                else:
+                    pit_now_medium['confidence'] = 'ALTERNATIVE'
+                    pit_now_hard['confidence'] = 'ALTERNATIVE'
+            else:
+                # Pitting is faster OR staying out is now slower - RECOMMEND PITTING
+                if best_option == 'PIT_HARD' or pit_now_hard['race_time_impact'] < pit_now_medium['race_time_impact']:
+                    pit_now_hard['confidence'] = 'HIGHLY_RECOMMENDED'
+                    pit_now_hard['reasoning'] = f'OPTIMAL! Best race time at {pit_now_hard["race_time_impact"]:+.1f}s - pit before cliff (lap {max_laps})'
+                    pit_now_medium['confidence'] = 'RECOMMENDED'
+                    pit_now_medium['reasoning'] = f'Alternative compound - pit before cliff (lap {max_laps})'
+                else:
+                    pit_now_medium['confidence'] = 'HIGHLY_RECOMMENDED'
+                    pit_now_medium['reasoning'] = f'OPTIMAL! Best race time at {pit_now_medium["race_time_impact"]:+.1f}s - pit before cliff (lap {max_laps})'
+                    pit_now_hard['confidence'] = 'RECOMMENDED'
+                    pit_now_hard['reasoning'] = f'Alternative compound - pit before cliff (lap {max_laps})'
+                stay_out['confidence'] = 'NOT_RECOMMENDED'
+                stay_out['reasoning'] = f'Slower by {abs(stay_out["race_time_impact"]):.1f}s AND will hit tire cliff at lap {max_laps} ({max_laps - self.state.tire_age} laps away)'
+
+        else:
+            # NORMAL: Not near cliff - just recommend the best option
+            if best_option == 'PIT_HARD':
+                pit_now_hard['confidence'] = 'RECOMMENDED'
+                pit_now_medium['confidence'] = 'ALTERNATIVE'
+                stay_out['confidence'] = 'ALTERNATIVE'
+            elif best_option == 'PIT_MEDIUM':
+                pit_now_medium['confidence'] = 'RECOMMENDED'
+                pit_now_hard['confidence'] = 'ALTERNATIVE'
+                stay_out['confidence'] = 'ALTERNATIVE'
+            else:
+                stay_out['confidence'] = 'RECOMMENDED'
+                pit_now_medium['confidence'] = 'ALTERNATIVE'
+                pit_now_hard['confidence'] = 'ALTERNATIVE'
+
+        # Option 1: PIT NOW for MEDIUM tires
         options.append(DecisionOption(
             option_id=1,
             category='PIT_STOP',
@@ -299,7 +460,7 @@ class InteractiveRaceSimulator:
         ))
 
         # Option 2: STAY OUT 3 more laps
-        stay_out = self._calculate_stay_out_impact(lap_number, 3, laps_remaining)
+
         options.append(DecisionOption(
             option_id=2,
             category='PIT_STOP',
@@ -316,8 +477,7 @@ class InteractiveRaceSimulator:
             ai_confidence=stay_out['confidence']
         ))
 
-        # Option 3: PIT NOW for HARD tires (alternative strategy)
-        pit_now_hard = self._calculate_pit_impact(lap_number, 'HARD', laps_remaining)
+        # Option 3: PIT NOW for HARD tires (calculated earlier)
         options.append(DecisionOption(
             option_id=3,
             category='PIT_STOP',

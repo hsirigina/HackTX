@@ -17,7 +17,8 @@ def display_options(options):
         confidence_emoji = {
             'HIGHLY_RECOMMENDED': '⭐',
             'RECOMMENDED': '✅',
-            'ALTERNATIVE': '🔧'
+            'ALTERNATIVE': '🔧',
+            'NOT_RECOMMENDED': '❌'
         }.get(option.ai_confidence, '❓')
 
         print(f"\n{confidence_emoji} OPTION {i}: {option.title}")
@@ -48,12 +49,18 @@ def get_user_choice(num_options):
             exit()
 
 
-def run_interactive_race():
+def run_interactive_race(demo_mode=False):
     """Run full interactive race simulation"""
 
     print("="*70)
     print("🏎️  F1 INTERACTIVE RACE SIMULATOR")
     print("="*70)
+
+    if demo_mode:
+        print("\n🎮 DEMO MODE: Quick race with only critical decisions (~5-8 total)")
+    else:
+        print("\n🎮 FULL MODE: Detailed race with all strategic decisions (~25 total)")
+
     print("\n📋 GOAL: Beat Verstappen's Bahrain 2024 race time")
     print("📋 You'll make strategic decisions throughout the race")
     print("📋 Choose wisely - every decision affects your final time!\n")
@@ -65,7 +72,8 @@ def run_interactive_race():
         race_year=2024,
         race_name='Bahrain',
         total_laps=57,
-        comparison_driver='VER'
+        comparison_driver='VER',
+        demo_mode=demo_mode
     )
 
     # Start race
@@ -73,55 +81,71 @@ def run_interactive_race():
 
     print(f"\n🎯 TARGET: Beat {race_info['comparison_time']:.1f}s")
 
-    # Race through all decision points
-    for decision_lap in sim.decision_laps:
-        # Simulate laps until decision point
-        if sim.state.current_lap < decision_lap:
-            print(f"\n⏩ Fast-forwarding to lap {decision_lap}...")
-            while sim.state.current_lap < decision_lap:
-                lap_time, lap_info = sim.simulate_lap(sim.state.current_lap)
-                sim.state.current_lap += 1
-
+    # Race through ALL laps - check each one if decision needed (DYNAMIC!)
+    current_lap = 1
+    while current_lap <= sim.total_laps:
+        # Check if we should offer decision at this lap
+        if sim.should_offer_decision(current_lap):
             # Show current state
-            print(f"\n📍 LAP {decision_lap}")
+            print(f"\n📍 LAP {current_lap}")
             print(f"   Current position: P{sim.state.position}")
             print(f"   Tire: {sim.state.tire_compound}, {sim.state.tire_age} laps old")
             print(f"   Driving style: {sim.state.driving_style.value}")
             print(f"   Total race time: {sim.state.total_race_time:.1f}s")
             print(f"   Pit stops: {len(sim.state.pit_stops)}")
 
-        # Generate decision options
-        options = sim.generate_decision_options(decision_lap)
+            # Generate decision options
+            options = sim.generate_decision_options(current_lap)
 
-        if not options:
-            continue
+            if not options:
+                print(f"   ⚠️  No decision options at this lap (cruising)")
+                current_lap += 1
+                continue
 
-        # Display options
-        display_options(options)
+            # Show WHY this decision point was triggered
+            max_laps = sim.tire_model.COMPOUND_WEAR_RATES[sim.state.tire_compound]['max_laps']
+            tire_pct = (sim.state.tire_age / max_laps) * 100
+            print(f"\n🔍 DECISION TRIGGER:")
+            print(f"   Tire age: {sim.state.tire_age}/{max_laps} laps ({tire_pct:.0f}%)")
+            print(f"   Compound: {sim.state.tire_compound}")
+            print(f"   Approaching cliff: {'YES ⚠️' if sim.state.tire_age >= (max_laps * 0.70) else 'No'}")
+            print(f"   Past cliff: {'YES 🔴' if sim.state.tire_age >= max_laps else 'No'}")
 
-        # Get user choice
-        choice_idx = get_user_choice(len(options))
-        selected_option = options[choice_idx]
+            # Count recommendations
+            recommended_count = sum(1 for opt in options if opt.ai_confidence in ['HIGHLY_RECOMMENDED', 'RECOMMENDED'])
+            print(f"\n📊 RECOMMENDATION SUMMARY:")
+            print(f"   {sum(1 for opt in options if opt.ai_confidence == 'HIGHLY_RECOMMENDED')} Highly Recommended")
+            print(f"   {sum(1 for opt in options if opt.ai_confidence == 'RECOMMENDED')} Recommended")
+            print(f"   {sum(1 for opt in options if opt.ai_confidence == 'ALTERNATIVE')} Alternative")
+            print(f"   {sum(1 for opt in options if opt.ai_confidence == 'NOT_RECOMMENDED')} Not Recommended")
 
-        # Execute decision
-        result = sim.execute_decision(selected_option)
+            if recommended_count == 0:
+                print(f"   ⚠️  WARNING: No recommended options! All alternatives!")
 
-        print(f"\n{'='*70}")
-        print(f"✅ DECISION EXECUTED")
-        print(f"{'='*70}")
-        print(f"   {result['message']}")
+            # Display options
+            display_options(options)
 
-        # Pause for effect
-        time.sleep(1)
+            # Get user choice
+            choice_idx = get_user_choice(len(options))
+            selected_option = options[choice_idx]
 
-    # Simulate remaining laps to finish
-    print(f"\n⏩ Racing to the finish...")
-    while sim.state.current_lap < sim.total_laps:
-        lap_time, lap_info = sim.simulate_lap(sim.state.current_lap)
-        sim.state.current_lap += 1
+            # Execute decision
+            result = sim.execute_decision(selected_option)
 
-    # Final lap
-    lap_time, lap_info = sim.simulate_lap(sim.total_laps)
+            print(f"\n{'='*70}")
+            print(f"✅ DECISION EXECUTED")
+            print(f"{'='*70}")
+            print(f"   {result['message']}")
+
+            # Pause for effect
+            time.sleep(1)
+
+        # Simulate this lap and move to next
+        if sim.state.current_lap == current_lap:
+            lap_time, lap_info = sim.simulate_lap(current_lap)
+            sim.state.current_lap += 1
+
+        current_lap += 1
 
     # Show final results
     final_comparison = sim.get_final_comparison()
@@ -167,8 +191,13 @@ def run_interactive_race():
 
 
 if __name__ == '__main__':
+    import sys
+
+    # Check for --demo flag
+    demo_mode = '--demo' in sys.argv
+
     try:
-        run_interactive_race()
+        run_interactive_race(demo_mode=demo_mode)
     except KeyboardInterrupt:
         print("\n\n🏁 Race abandoned!")
     except Exception as e:
