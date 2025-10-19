@@ -8,6 +8,7 @@ echo "📹 Camera will start in a moment"
 echo "✋ Swipe left/right with your hand to control scenarios"
 echo ""
 
+# Activate venv and run server
 source ../venv/bin/activate
 python gesture_server.py
 
