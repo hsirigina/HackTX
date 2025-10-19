@@ -13,7 +13,6 @@
       "Bash(curl:*)",
       "Bash(python3:*)",
       "Bash(python:*)",
-      "Bash(pip install:*)"
       "Bash(pip install:*)",
       "Bash(git checkout frontend/src/AgentDashboard.jsx frontend/src/AgentDashboard.css)",
       "Bash(python3.12 --version)",

@@ -908,11 +908,19 @@ class InteractiveRaceSimulator:
         delta = user_time - comparison_time
 
         # Calculate leaderboard position by comparing to all drivers
+        # ONLY include drivers who completed the FULL race distance
+        # This ensures we're comparing apples-to-apples (no drivers who DNF'd with fewer laps)
+        
+        print(f"\n🔍 BUILDING FINAL LEADERBOARD:")
+        print(f"   Required laps to classify: {self.total_laps}")
+        
         leaderboard = []
+        excluded_drivers = []
         for driver_code in self.session.drivers:
             try:
                 laps = self.session.laps.pick_driver(driver_code)
-                if len(laps) > 0:
+                # ONLY include drivers who completed ALL laps (full race distance)
+                if len(laps) >= self.total_laps:
                     laptimes = laps['LapTime'].dt.total_seconds()
                     total_time = laptimes.sum()
                     driver_info = self.session.get_driver(driver_code)
@@ -920,24 +928,41 @@ class InteractiveRaceSimulator:
                     leaderboard.append({
                         'driver': driver_code,
                         'team': driver_info.get('TeamName', 'Unknown'),
-                        'time': total_time
+                        'time': total_time,
+                        'laps_completed': len(laps)
                     })
-            except:
-                pass
+                else:
+                    excluded_drivers.append(f"{driver_code} ({len(laps)} laps)")
+            except Exception as e:
+                excluded_drivers.append(f"{driver_code} (error: {str(e)[:30]})")
+        
+        print(f"   ✅ Included: {len(leaderboard)} drivers with {self.total_laps}+ laps")
+        print(f"   ❌ Excluded: {len(excluded_drivers)} drivers - {', '.join(excluded_drivers[:5])}")
 
         # Add user's time to leaderboard
         leaderboard.append({
             'driver': 'YOU',
             'team': 'Your Strategy',
-            'time': user_time
+            'time': user_time,
+            'laps_completed': self.total_laps
         })
 
         # Sort by time
         leaderboard.sort(key=lambda x: x['time'])
+        
+        print(f"\n🏁 FINAL CLASSIFICATION:")
+        print(f"   Total drivers in race: {len(self.session.drivers)}")
+        print(f"   Drivers who finished ({self.total_laps} laps): {len(leaderboard)}")
+        print(f"   DNF/Lapped drivers excluded: {len(self.session.drivers) - len(leaderboard) + 1}")
 
         # Find user's position
         user_position = next(i+1 for i, d in enumerate(leaderboard) if d['driver'] == 'YOU')
         gap_to_winner = user_time - leaderboard[0]['time']
+        
+        print(f"\n📊 Your Result:")
+        print(f"   Position: P{user_position} / {len(leaderboard)}")
+        print(f"   Total time: {user_time:.1f}s")
+        print(f"   Gap to winner: +{gap_to_winner:.1f}s")
 
         # Get nearby drivers (±2 positions)
         nearby_start = max(0, user_position - 3)
@@ -946,8 +971,17 @@ class InteractiveRaceSimulator:
 
         # Calculate if user would have won
         result = 'WON' if delta < 0 else 'LOST'
+        
+        # Show top 10 for verification
+        print(f"\n🏆 FULL LEADERBOARD BEING SENT TO FRONTEND:")
+        print(f"   Total entries in leaderboard: {len(leaderboard)}")
+        print(f"   User position in leaderboard: P{user_position}")
+        print(f"\n   Top 10:")
+        for i, driver in enumerate(leaderboard[:10], 1):
+            marker = " <-- YOU" if driver['driver'] == 'YOU' else ""
+            print(f"   P{i}: {driver['driver']} - {driver['time']:.1f}s ({driver['laps_completed']} laps){marker}")
 
-        return {
+        final_results = {
             'result': result,
             'user_time': user_time,
             'comparison_driver': self.comparison_driver,
@@ -961,8 +995,16 @@ class InteractiveRaceSimulator:
             'total_drivers': len(leaderboard),
             'gap_to_winner': gap_to_winner,
             'nearby_drivers': nearby_drivers,
-            'full_leaderboard': leaderboard[:10]  # Top 10
+            'full_leaderboard': leaderboard  # Return FULL leaderboard of race finishers
         }
+        
+        print(f"\n✅ SENDING FINAL RESULTS:")
+        print(f"   leaderboard_position: {user_position}")
+        print(f"   total_drivers: {len(leaderboard)}")
+        print(f"   full_leaderboard length: {len(final_results['full_leaderboard'])}")
+        print(f"   Winner in leaderboard: {leaderboard[0]['driver']} - {leaderboard[0]['time']:.1f}s")
+        
+        return final_results
 
 
 if __name__ == '__main__':

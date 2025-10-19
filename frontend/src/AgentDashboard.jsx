@@ -34,9 +34,20 @@ function AgentDashboard() {
   const [isLaptimeModalOpen, setIsLaptimeModalOpen] = useState(false)
   const [isPositionModalOpen, setIsPositionModalOpen] = useState(false)
 
-  // Start race and fetch backend data
+  // Race selection state
+  const [showSelection, setShowSelection] = useState(true)
+  const [availableRaces, setAvailableRaces] = useState([])
+  const [selectedRace, setSelectedRace] = useState(null)
+  const [selectedPosition, setSelectedPosition] = useState(3)
+  const [selectedTire, setSelectedTire] = useState('SOFT')
+  const [selectedDriver, setSelectedDriver] = useState('VER')
+  const [loadingRaces, setLoadingRaces] = useState(true)
+  const [raceStarted, setRaceStarted] = useState(false)
+  const [lastRaceResults, setLastRaceResults] = useState(null)
+
+  // Load available races on mount
   useEffect(() => {
-    startRace()
+    loadAvailableRaces()
   }, [])
 
   // Poll gesture server for hand gestures
@@ -87,7 +98,45 @@ function AgentDashboard() {
     return () => clearInterval(interval)
   }, [currentScenarioIndex, scenarios.length])
 
+  const loadAvailableRaces = async () => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/races/available`)
+      const data = await response.json()
+      if (data.success && data.data && data.data.races) {
+        setAvailableRaces(data.data.races)
+        // Set Bahrain as default
+        const bahrain = data.data.races.find(r => r.id === 'bahrain')
+        setSelectedRace(bahrain || data.data.races[0])
+      } else {
+        // Fallback races if API fails
+        const fallbackRaces = [
+          { id: 'bahrain', name: 'Bahrain Grand Prix', laps: 57, country: 'Bahrain' },
+          { id: 'monaco', name: 'Monaco Grand Prix', laps: 78, country: 'Monaco' }
+        ]
+        setAvailableRaces(fallbackRaces)
+        setSelectedRace(fallbackRaces[0])
+      }
+      setLoadingRaces(false)
+      setInitialLoading(false)
+    } catch (error) {
+      console.error('Failed to load races:', error)
+      // Fallback races if API fails
+      const fallbackRaces = [
+        { id: 'bahrain', name: 'Bahrain Grand Prix', laps: 57, country: 'Bahrain' },
+        { id: 'monaco', name: 'Monaco Grand Prix', laps: 78, country: 'Monaco' }
+      ]
+      setAvailableRaces(fallbackRaces)
+      setSelectedRace(fallbackRaces[0])
+      setLoadingRaces(false)
+      setInitialLoading(false)
+    }
+  }
+
   const startRace = async () => {
+    if (!selectedRace) return
+
+    setLoading(true)
+    setShowSelection(false)
     setInitialLoading(true)
     const startTime = Date.now()
 
@@ -100,10 +149,10 @@ function AgentDashboard() {
         body: JSON.stringify({
           session_id: SESSION_ID,
           race_year: 2024,
-          race_name: 'Bahrain',
-          total_laps: 57,
-          starting_position: 3,
-          starting_compound: 'SOFT'
+          race_name: selectedRace.id,
+          comparison_driver: selectedDriver,
+          starting_position: selectedPosition,
+          starting_compound: selectedTire
         })
       })
 
@@ -114,6 +163,12 @@ function AgentDashboard() {
       setScenarios(data.strategies)
       setRaceState(data.state)
       setApiCalls(1)
+      setRaceStarted(true)
+
+      // Update selected race with actual total laps from backend if available
+      if (data.totalLaps && selectedRace) {
+        setSelectedRace({...selectedRace, laps: data.totalLaps})
+      }
 
       // Add initial event
       setEvents([{
@@ -122,30 +177,32 @@ function AgentDashboard() {
         reasoning: `Starting from P${data.state.position} on ${data.state.tireCompound} tires`
       }])
 
-      // Ensure minimum 5 seconds of loading
+      // Ensure minimum 2 seconds of loading
       const elapsedTime = Date.now() - startTime
-      const remainingTime = Math.max(0, 5000 - elapsedTime)
+      const remainingTime = Math.max(0, 2000 - elapsedTime)
 
       setTimeout(() => {
         setInitialLoading(false)
+        setLoading(false)
       }, remainingTime)
     } catch (error) {
       console.error('Failed to start race:', error)
 
-      // Still wait minimum 5 seconds even on error
+      // Still wait minimum 2 seconds even on error
       const elapsedTime = Date.now() - startTime
-      const remainingTime = Math.max(0, 5000 - elapsedTime)
+      const remainingTime = Math.max(0, 2000 - elapsedTime)
 
       setTimeout(() => {
         alert('Failed to connect to backend API. Make sure the backend is running on port 8000. Error: ' + error.message)
         setInitialLoading(false)
+        setLoading(false)
       }, remainingTime)
     }
   }
 
   // Parse agent insights from race state
   const parseInsights = () => {
-    const avgLapTime = raceState.totalRaceTime / Math.max(currentLap, 1)
+    const avgLapTime = raceState.totalRaceTime / Math.max(currentLap || 1, 1)
 
     return {
       tire: {
@@ -168,8 +225,8 @@ function AgentDashboard() {
       },
       position: {
         position: raceState.position || 3,
-        gap_ahead: '+0.5',
-        gap_behind: '-1.2',
+        gap_ahead: raceState.gapAhead || '--',
+        gap_behind: raceState.gapBehind || '--',
         status: 'active',
         triggers: []
       },
@@ -182,11 +239,16 @@ function AgentDashboard() {
     }
   }
 
-  const insights = parseInsights()
+  const insights = raceStarted ? parseInsights() : {
+    tire: { compound: '--', tire_age: 0, degradation: '--', status: 'active', triggers: [] },
+    laptime: { current_time: '--', avg_time: '--', trend: '--', status: 'active', triggers: [] },
+    position: { position: '--', gap_ahead: '--', gap_behind: '--', status: 'active', triggers: [] },
+    competitor: { threats: 0, pit_status: '--', status: 'active', triggers: [] }
+  }
 
   // Handle strategy selection and progress race
   const handleScenarioSelect = async (scenario) => {
-    if (loading) return
+    if (loading || !scenario) return
 
     try {
       setLoading(true)
@@ -201,39 +263,55 @@ function AgentDashboard() {
         })
       })
 
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
       const data = await response.json()
       console.log('Decision result:', data)
+      console.log('Race finished?', data.raceFinished)
+      console.log('Final results:', data.finalResults)
+      
+      if (data.finalResults && data.finalResults.full_leaderboard) {
+        console.log('🏁 Leaderboard received:')
+        console.log(`   Total finishers: ${data.finalResults.full_leaderboard.length}`)
+        console.log(`   Winner: ${data.finalResults.full_leaderboard[0]?.driver} - ${data.finalResults.full_leaderboard[0]?.time?.toFixed(1)}s`)
+        console.log(`   Your position: P${data.finalResults.leaderboard_position} / ${data.finalResults.total_drivers}`)
+      }
 
       setApiCalls(apiCalls + 1)
 
       // Add event to timeline
       setEvents(prev => [{
         lap_number: currentLap,
-        recommendation_type: scenario.title,
-        reasoning: scenario.description
+        recommendation_type: scenario.title || 'Decision',
+        reasoning: scenario.description || 'Strategy selected'
       }, ...prev.slice(0, 4)])
 
       // Update race state
       if (data.raceFinished) {
+        console.log('🏁 RACE FINISHED! Setting final results...')
         setRaceFinished(true)
-        setCurrentLap(57)
+        setCurrentLap(data.currentLap || selectedRace?.laps || 57)
         setScenarios([])
-        setFinalResults(data.finalResults)
+        setFinalResults(data.finalResults || null)
+        setRaceState(data.state || raceState)
         setEvents(prev => [{
-          lap_number: 57,
+          lap_number: data.currentLap || selectedRace?.laps || 57,
           recommendation_type: 'RACE FINISHED',
           reasoning: 'Race completed!'
         }, ...prev])
       } else {
-        setCurrentLap(data.currentLap)
-        setScenarios(data.strategies)
-        setRaceState(data.state)
+        setCurrentLap(data.currentLap || currentLap)
+        setScenarios(data.strategies || [])
+        setRaceState(data.state || raceState)
         setCurrentScenarioIndex(0)
       }
 
       setLoading(false)
     } catch (error) {
       console.error('Failed to make decision:', error)
+      alert(`Error making decision: ${error.message}. Please check that the backend is running.`)
       setLoading(false)
     }
   }
@@ -285,12 +363,12 @@ function AgentDashboard() {
     }
   }
 
-  if (initialLoading) {
+  if (initialLoading && !showSelection) {
     return (
       <div className="loading-container">
         <div className="loading-apex-title"></div>
         <div className="loading-spinner"></div>
-        <div className="loading-text">INITIALIZING F1 STRATEGY SYSTEM...</div>
+        <div className="loading-text">INITIALIZING RACE SIMULATION...</div>
       </div>
     )
   }
@@ -340,7 +418,7 @@ function AgentDashboard() {
                     <span className="trigger-dot"></span>
                     {trigger.message || trigger}
                   </div>
-                )) || <div className="trigger low">No active triggers</div>}
+                )) || <div className="trigger low">{raceStarted ? 'Tires in good condition' : 'Waiting for race start...'}</div>}
               </div>
             </div>
           </div>
@@ -378,7 +456,7 @@ function AgentDashboard() {
                     <span className="trigger-dot"></span>
                     {trigger.message || trigger}
                   </div>
-                )) || <div className="trigger low">Pace stable</div>}
+                )) || <div className="trigger low">{raceStarted ? 'Pace stable' : 'Waiting for race start...'}</div>}
               </div>
             </div>
           </div>
@@ -389,6 +467,7 @@ function AgentDashboard() {
           <div className="coordinator-header">
             <div className="coord-title">AI COORDINATOR</div>
             <div className="coord-model">Gemini 2.0 Flash</div>
+            {raceStarted && (
             <button
               className="live-sim-button"
               onClick={() => navigate('/livesim')}
@@ -409,36 +488,272 @@ function AgentDashboard() {
             >
               🎮 Live Sim
             </button>
+            )}
           </div>
 
           <div className="lap-display">
             <div className="lap-label">CURRENT LAP</div>
-            <div className="lap-number">{currentLap || '--'}<span>/57</span></div>
+            <div className="lap-number">{currentLap || '--'}<span>/{selectedRace?.laps || '--'}</span></div>
           </div>
 
-          {/* Swipable Scenario Carousel OR Final Results */}
-          {raceFinished ? (
+          {/* Swipable Scenario Carousel OR Final Results OR Race Selection */}
+          {!raceStarted && showSelection ? (
+            /* Race Selection Screen */
+            <div style={{ 
+              padding: '20px', 
+              pointerEvents: 'auto',
+              userSelect: 'auto',
+              WebkitUserSelect: 'auto',
+              position: 'relative',
+              zIndex: 10
+            }}>
+              <div style={{
+                textAlign: 'center',
+                marginBottom: '30px'
+              }}>
+                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>
+                  🏎️ Race Configuration
+                </div>
+                <div style={{ fontSize: '16px', color: '#889aab' }}>
+                  Select your race parameters
+                </div>
+              </div>
+
+              {loadingRaces || initialLoading ? (
+                <div style={{ textAlign: 'center', color: '#889aab', padding: '40px' }}>
+                  Loading races...
+                </div>
+              ) : (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(2, 1fr)',
+                  gap: '20px',
+                  marginBottom: '30px'
+                }}>
+                  {/* Race Selection */}
+                  <div style={{
+                    backgroundColor: '#1a2332',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '2px solid #2d3748'
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
+                      🏁 RACE
+                    </div>
+                    <select
+                      value={selectedRace?.id || ''}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedRace(availableRaces.find(r => r.id === e.target.value));
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        fontSize: '16px',
+                        backgroundColor: '#0d1117',
+                        color: '#fff',
+                        border: '1px solid #2d3748',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto',
+                        userSelect: 'auto',
+                        WebkitAppearance: 'menulist',
+                        appearance: 'auto'
+                      }}
+                    >
+                      {availableRaces.map(race => (
+                        <option key={race.id} value={race.id}>
+                          {race.name} ({race.laps} laps)
+                        </option>
+                      ))}
+                    </select>
+                    {selectedRace && (
+                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#667788' }}>
+                        📍 {selectedRace.country}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Starting Position */}
+                  <div style={{
+                    backgroundColor: '#1a2332',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '2px solid #2d3748'
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
+                      🎯 STARTING POSITION
+                    </div>
+                    <select
+                      value={selectedPosition}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedPosition(parseInt(e.target.value));
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        fontSize: '16px',
+                        backgroundColor: '#0d1117',
+                        color: '#fff',
+                        border: '1px solid #2d3748',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto',
+                        userSelect: 'auto',
+                        WebkitAppearance: 'menulist',
+                        appearance: 'auto'
+                      }}
+                    >
+                      {Array.from({length: 20}, (_, i) => i + 1).map(pos => (
+                        <option key={pos} value={pos}>P{pos}</option>
+                      ))}
+                    </select>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#667788' }}>
+                      Grid position at race start
+                    </div>
+                  </div>
+
+                  {/* Tire Compound */}
+                  <div style={{
+                    backgroundColor: '#1a2332',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '2px solid #2d3748'
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
+                      🛞 STARTING TIRE
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                      {['SOFT', 'MEDIUM', 'HARD'].map(compound => (
+                        <button
+                          key={compound}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTire(compound);
+                          }}
+                          style={{
+                            padding: '12px',
+                            fontSize: '14px',
+                            fontWeight: 'bold',
+                            backgroundColor: selectedTire === compound ? '#ff1e00' : '#0d1117',
+                            color: '#fff',
+                            border: selectedTire === compound ? '2px solid #ff1e00' : '1px solid #2d3748',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            pointerEvents: 'auto',
+                            userSelect: 'none'
+                          }}
+                        >
+                          <span>{compound === 'SOFT' ? '🔴' : compound === 'MEDIUM' ? '🟡' : '⚪'} {compound}</span>
+                          <span style={{ fontSize: '11px', color: '#889aab' }}>
+                            {compound === 'SOFT' ? 'Fast/Fragile' : compound === 'MEDIUM' ? 'Balanced' : 'Durable/Slow'}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Comparison Driver */}
+                  <div style={{
+                    backgroundColor: '#1a2332',
+                    padding: '20px',
+                    borderRadius: '8px',
+                    border: '2px solid #2d3748'
+                  }}>
+                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
+                      👤 COMPARE WITH
+                    </div>
+                    <select
+                      value={selectedDriver}
+                      onChange={(e) => {
+                        e.stopPropagation();
+                        setSelectedDriver(e.target.value);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        fontSize: '16px',
+                        backgroundColor: '#0d1117',
+                        color: '#fff',
+                        border: '1px solid #2d3748',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        pointerEvents: 'auto',
+                        userSelect: 'auto',
+                        WebkitAppearance: 'menulist',
+                        appearance: 'auto'
+                      }}
+                    >
+                      {['VER', 'PER', 'LEC', 'SAI', 'HAM', 'RUS', 'NOR', 'PIA', 'ALO', 'STR'].map(driver => (
+                        <option key={driver} value={driver}>{driver}</option>
+                      ))}
+                    </select>
+                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#667788' }}>
+                      Benchmark driver for lap times
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div style={{ textAlign: 'center' }}>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    startRace();
+                  }}
+                  disabled={loading || loadingRaces || !selectedRace}
+                  style={{
+                    padding: '16px 48px',
+                    fontSize: '18px',
+                    fontWeight: 'bold',
+                    backgroundColor: (loading || loadingRaces || !selectedRace) ? '#667788' : '#ff1e00',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: (loading || loadingRaces || !selectedRace) ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s',
+                    pointerEvents: 'auto',
+                    userSelect: 'none'
+                  }}
+                >
+                  {loading ? 'Starting Race...' : '🏁 Start Race'}
+                </button>
+              </div>
+            </div>
+          ) : raceFinished ? (
             <div className="final-results-container">
-              {finalResults && (
+              {finalResults ? (
                 <div className="race-performance-section">
                   <div className="section-header">🏆 YOUR RACE PERFORMANCE</div>
                   <div className="performance-grid">
                     <div className="perf-stat">
                       <span className="perf-label">Your time:</span>
-                      <span className="perf-value">{finalResults.user_time.toFixed(1)}s</span>
+                      <span className="perf-value">{finalResults.user_time ? finalResults.user_time.toFixed(1) : '--'}s</span>
                     </div>
                     <div className="perf-stat">
                       <span className="perf-label">Winner's time:</span>
-                      <span className="perf-value">{finalResults.full_leaderboard[0].time.toFixed(1)}s</span>
+                      <span className="perf-value">{finalResults.full_leaderboard?.[0]?.time ? finalResults.full_leaderboard[0].time.toFixed(1) : '--'}s</span>
                     </div>
                     <div className="perf-stat">
                       <span className="perf-label">Gap to winner:</span>
-                      <span className="perf-value highlight">+{finalResults.gap_to_winner.toFixed(1)}s</span>
+                      <span className="perf-value highlight">+{finalResults.gap_to_winner ? finalResults.gap_to_winner.toFixed(1) : '--'}s</span>
                     </div>
                     <div className="perf-stat">
                       <span className="perf-label">Final position:</span>
-                      <span className="perf-value highlight">P{finalResults.leaderboard_position} / {finalResults.total_drivers}</span>
+                      <span className="perf-value highlight">P{finalResults.leaderboard_position || '--'} / {finalResults.total_drivers || '--'}</span>
                     </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="race-performance-section">
+                  <div className="section-header">🏆 RACE COMPLETE!</div>
+                  <div style={{ textAlign: 'center', padding: '40px', color: '#889aab' }}>
+                    Race finished! Final results are being calculated...
                   </div>
                 </div>
               )}
@@ -478,40 +793,87 @@ function AgentDashboard() {
                       <div
                         key={index}
                         className="recommendation-box"
-                        onClick={() => handleScenarioSelect(scenario)}
-                        style={{ cursor: 'pointer' }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleScenarioSelect(scenario);
+                        }}
+                        style={{ cursor: loading ? 'wait' : 'pointer' }}
                       >
                         <div className="rec-header">
                           <span className="rec-label">
-                            {scenario.option}
+                            {scenario.option || `Option ${index + 1}`}
                           </span>
                           <span className={`rec-urgency ${scenario.confidence?.toLowerCase() || 'recommended'}`}>
                             {scenario.confidence || 'RECOMMENDED'}
                           </span>
                         </div>
 
-                        <div className="rec-type">{scenario.title}</div>
-                        <div className="rec-message">{scenario.description}</div>
-                        <div className="rec-reasoning">{scenario.reasoning}</div>
+                        <div className="rec-type">{scenario.title || 'Strategy Decision'}</div>
+                        <div className="rec-message">{scenario.description || 'Make a strategic decision'}</div>
+                        <div className="rec-reasoning">{scenario.reasoning || ''}</div>
 
                         <div className="rec-meta">
                           <div className="rec-metrics">
                             <div className="metric-item">
                               <span>Race Impact:</span>
-                              <span>{scenario.raceTimeImpact}</span>
+                              <span>{scenario.raceTimeImpact || '--'}</span>
                             </div>
                             <div className="metric-item">
                               <span>Lap Impact:</span>
-                              <span>{scenario.lapTimeImpact}</span>
+                              <span>{scenario.lapTimeImpact || '--'}</span>
                             </div>
                             <div className="metric-item">
                               <span>Tire Wear:</span>
-                              <span>{scenario.tireWear}</span>
+                              <span>{scenario.tireWear || '--'}</span>
                             </div>
                           </div>
                         </div>
                       </div>
                     ))}
+                  </div>
+                ) : lastRaceResults ? (
+                  <div className="recommendation-box" style={{ 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    alignItems: 'center', 
+                    justifyContent: 'center',
+                    gap: '20px',
+                    padding: '40px'
+                  }}>
+                    <div className="rec-empty" style={{ marginBottom: '10px' }}>
+                      Previous race completed
+                    </div>
+                    <button
+                      onClick={() => {
+                        setFinalResults(lastRaceResults);
+                        setRaceFinished(true);
+                      }}
+                      style={{
+                        padding: '14px 30px',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        backgroundColor: 'rgba(0, 191, 255, 0.1)',
+                        color: '#00bfff',
+                        border: '1px solid rgba(0, 191, 255, 0.3)',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        textTransform: 'uppercase',
+                        letterSpacing: '1px'
+                      }}
+                      onMouseOver={(e) => {
+                        e.target.style.backgroundColor = 'rgba(0, 191, 255, 0.2)';
+                        e.target.style.borderColor = 'rgba(0, 191, 255, 0.5)';
+                        e.target.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.3)';
+                      }}
+                      onMouseOut={(e) => {
+                        e.target.style.backgroundColor = 'rgba(0, 191, 255, 0.1)';
+                        e.target.style.borderColor = 'rgba(0, 191, 255, 0.3)';
+                        e.target.style.boxShadow = 'none';
+                      }}
+                    >
+                      📊 View Last Race Results
+                    </button>
                   </div>
                 ) : (
                   <div className="recommendation-box">
@@ -545,7 +907,7 @@ function AgentDashboard() {
                 </div>
               )) : (
                 <div className="event-item">
-                  <span className="event-text">No recent events</span>
+                  <span className="event-text">{raceStarted ? 'No recent events' : 'Waiting for race start...'}</span>
                 </div>
               )}
             </div>
@@ -605,7 +967,7 @@ function AgentDashboard() {
                     <span className="trigger-dot"></span>
                     {trigger.message || trigger}
                   </div>
-                )) || <div className="trigger low">Position stable</div>}
+                )) || <div className="trigger low">{raceStarted ? 'Position stable' : 'Waiting for race start...'}</div>}
               </div>
             </div>
           </div>
@@ -643,7 +1005,7 @@ function AgentDashboard() {
                     <span className="trigger-dot"></span>
                     {trigger.message || trigger}
                   </div>
-                )) || <div className="trigger low">No threats detected</div>}
+                )) || <div className="trigger low">{raceStarted ? 'No threats detected' : 'Waiting for race start...'}</div>}
               </div>
             </div>
           </div>
@@ -653,7 +1015,11 @@ function AgentDashboard() {
       {/* Footer */}
       <div className="dash-footer">
         <div className="footer-right">
-          <span>RACE: Bahrain 2024 • POSITION: P{raceState.position} • TIRES: {raceState.tireCompound} ({raceState.tireAge} laps) • STYLE: {raceState.drivingStyle}</span>
+          {raceStarted ? (
+            <span>RACE: {selectedRace?.name} 2024 • POSITION: P{raceState.position} • TIRES: {raceState.tireCompound} ({raceState.tireAge} laps) • STYLE: {raceState.drivingStyle}</span>
+          ) : (
+            <span>MULTI-AGENT SYSTEM • {selectedRace ? `${selectedRace.name} selected` : 'Ready to configure...'}</span>
+          )}
         </div>
       </div>
 
@@ -690,6 +1056,354 @@ function AgentDashboard() {
         }}
         currentLap={currentLap}
       />
+
+      {/* Race Complete Modal */}
+      {raceFinished && finalResults && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+          padding: '20px',
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)'
+        }}>
+          <div style={{
+            backgroundColor: 'rgba(13, 17, 23, 0.95)',
+            border: '1px solid rgba(0, 191, 255, 0.3)',
+            borderRadius: '8px',
+            maxWidth: '700px',
+            width: '100%',
+            maxHeight: 'fit-content',
+            boxShadow: '0 0 50px rgba(0, 191, 255, 0.2)',
+            position: 'relative'
+          }}>
+            {/* Close Button */}
+            <button
+              onClick={() => {
+                setLastRaceResults(finalResults);
+                setRaceFinished(false);
+              }}
+              style={{
+                position: 'absolute',
+                top: '20px',
+                right: '20px',
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                backgroundColor: 'rgba(13, 17, 23, 0.8)',
+                border: '1px solid rgba(136, 154, 171, 0.3)',
+                color: '#889aab',
+                fontSize: '24px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.2s',
+                zIndex: 10
+              }}
+              onMouseOver={(e) => {
+                e.target.style.backgroundColor = 'rgba(136, 154, 171, 0.2)';
+                e.target.style.color = '#fff';
+                e.target.style.borderColor = 'rgba(0, 191, 255, 0.5)';
+              }}
+              onMouseOut={(e) => {
+                e.target.style.backgroundColor = 'rgba(13, 17, 23, 0.8)';
+                e.target.style.color = '#889aab';
+                e.target.style.borderColor = 'rgba(136, 154, 171, 0.3)';
+              }}
+            >
+              ×
+            </button>
+
+            {/* Header */}
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(0, 191, 255, 0.1) 0%, rgba(0, 191, 255, 0.05) 100%)',
+              padding: '25px 20px 20px',
+              borderBottom: '1px solid rgba(0, 191, 255, 0.2)',
+              textAlign: 'center',
+              position: 'relative'
+            }}>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>🏁</div>
+              <h2 style={{ 
+                fontSize: '24px', 
+                fontWeight: 'bold', 
+                color: '#00bfff',
+                margin: '0 0 8px 0',
+                textTransform: 'uppercase',
+                letterSpacing: '2px',
+                textShadow: '0 0 20px rgba(0, 191, 255, 0.5)'
+              }}>
+                Race Complete!
+              </h2>
+              <p style={{ 
+                fontSize: '13px', 
+                color: '#889aab',
+                margin: 0,
+                letterSpacing: '0.5px'
+              }}>
+                {selectedRace?.name} • {new Date().getFullYear()}
+              </p>
+            </div>
+
+            {/* Your Performance */}
+            <div style={{
+              padding: '20px',
+              borderBottom: '1px solid rgba(0, 191, 255, 0.1)'
+            }}>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#00bfff',
+                marginBottom: '15px',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px'
+              }}>
+                🏆 Your Performance
+              </h3>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, 1fr)',
+                gap: '12px'
+              }}>
+                <div style={{
+                  backgroundColor: 'rgba(13, 17, 23, 0.6)',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  border: '1px solid rgba(0, 191, 255, 0.2)',
+                  transition: 'all 0.3s'
+                }}>
+                  <div style={{ fontSize: '11px', color: '#889aab', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Final Position</div>
+                  <div style={{ 
+                    fontSize: '32px', 
+                    fontWeight: 'bold', 
+                    color: '#00bfff',
+                    textShadow: '0 0 20px rgba(0, 191, 255, 0.5)',
+                    lineHeight: '1'
+                  }}>
+                    P{finalResults.leaderboard_position || '--'}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#667788', marginTop: '6px' }}>out of {finalResults.total_drivers || '--'} finishers</div>
+                </div>
+                <div style={{
+                  backgroundColor: 'rgba(13, 17, 23, 0.6)',
+                  padding: '15px',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  border: '1px solid rgba(0, 191, 255, 0.2)',
+                  transition: 'all 0.3s'
+                }}>
+                  <div style={{ fontSize: '11px', color: '#889aab', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Gap to Winner</div>
+                  <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#00ff88', lineHeight: '1' }}>
+                    +{finalResults.gap_to_winner ? finalResults.gap_to_winner.toFixed(1) : '--'}s
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#667788', marginTop: '6px' }}>Time difference</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Final Leaderboard */}
+            <div style={{ padding: '20px' }}>
+              <h3 style={{
+                fontSize: '16px',
+                fontWeight: 'bold',
+                color: '#00bfff',
+                marginBottom: '8px',
+                textAlign: 'center',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px'
+              }}>
+                📊 Final Classification
+              </h3>
+              <p style={{
+                fontSize: '10px',
+                color: '#667788',
+                textAlign: 'center',
+                marginBottom: '12px',
+                marginTop: '0'
+              }}>
+                Drivers who completed the full race distance
+              </p>
+              <div style={{
+                backgroundColor: 'rgba(13, 17, 23, 0.4)',
+                borderRadius: '6px',
+                overflow: 'hidden',
+                border: '1px solid rgba(0, 191, 255, 0.1)',
+                maxHeight: '300px',
+                overflowY: 'auto'
+              }}>
+                {/* Leaderboard Header */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: '60px 1fr 120px 100px',
+                  padding: '10px 15px',
+                  backgroundColor: 'rgba(0, 191, 255, 0.05)',
+                  fontSize: '10px',
+                  fontWeight: 'bold',
+                  color: '#889aab',
+                  borderBottom: '1px solid rgba(0, 191, 255, 0.2)',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}>
+                  <div>Pos</div>
+                  <div>Driver</div>
+                  <div>Time</div>
+                  <div>Gap</div>
+                </div>
+                
+                {/* Leaderboard Rows */}
+                {finalResults.full_leaderboard?.slice(0, 15).map((driver, index) => {
+                  const isUser = driver.driver === 'YOU';
+                  const winnerTime = finalResults.full_leaderboard[0]?.time || 0;
+                  const gap = index === 0 ? 0 : driver.time - winnerTime;
+                  
+                  return (
+                    <div 
+                      key={index}
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '60px 1fr 120px 100px',
+                        padding: '12px 15px',
+                        backgroundColor: isUser ? 'rgba(0, 191, 255, 0.15)' : (index % 2 === 0 ? 'rgba(0, 191, 255, 0.02)' : 'transparent'),
+                        borderLeft: isUser ? '3px solid #00bfff' : '3px solid transparent',
+                        borderBottom: index < 14 ? '1px solid rgba(0, 191, 255, 0.1)' : 'none',
+                        transition: 'all 0.2s',
+                        fontSize: '12px'
+                      }}
+                    >
+                      <div style={{ 
+                        fontWeight: 'bold', 
+                        fontSize: '13px',
+                        color: index === 0 ? '#ffd700' : index === 1 ? '#c0c0c0' : index === 2 ? '#cd7f32' : '#00bfff'
+                      }}>
+                        {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `P${index + 1}`}
+                      </div>
+                      <div style={{ 
+                        fontWeight: isUser ? 'bold' : 'normal',
+                        color: isUser ? '#00bfff' : '#fff',
+                        fontSize: '12px'
+                      }}>
+                        {driver.driver}
+                        {driver.team && (
+                          <div style={{ fontSize: '9px', color: '#667788', marginTop: '2px' }}>
+                            {driver.team}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ color: '#889aab', fontFamily: 'monospace', fontSize: '11px' }}>
+                        {driver.time ? driver.time.toFixed(1) : '--'}s
+                      </div>
+                      <div style={{ 
+                        color: index === 0 ? '#00ff88' : '#889aab',
+                        fontFamily: 'monospace',
+                        fontWeight: '500',
+                        fontSize: '11px'
+                      }}>
+                        {index === 0 ? '—' : `+${gap.toFixed(1)}s`}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              {finalResults.full_leaderboard?.length > 15 && (
+                <div style={{
+                  textAlign: 'center',
+                  padding: '8px',
+                  fontSize: '10px',
+                  color: '#667788'
+                }}>
+                  + {finalResults.full_leaderboard.length - 15} more drivers
+                </div>
+              )}
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ 
+              padding: '15px 20px',
+              textAlign: 'center',
+              display: 'flex',
+              gap: '12px',
+              justifyContent: 'center',
+              borderTop: '1px solid rgba(0, 191, 255, 0.1)'
+            }}>
+              <button
+                onClick={() => {
+                  setLastRaceResults(finalResults);
+                  setRaceFinished(false);
+                }}
+                style={{
+                  padding: '12px 24px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  backgroundColor: 'rgba(13, 17, 23, 0.8)',
+                  color: '#889aab',
+                  border: '1px solid rgba(136, 154, 171, 0.3)',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textTransform: 'uppercase',
+                  letterSpacing: '1px'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = 'rgba(136, 154, 171, 0.2)';
+                  e.target.style.color = '#fff';
+                  e.target.style.borderColor = 'rgba(0, 191, 255, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = 'rgba(13, 17, 23, 0.8)';
+                  e.target.style.color = '#889aab';
+                  e.target.style.borderColor = 'rgba(136, 154, 171, 0.3)';
+                }}
+              >
+                Close
+              </button>
+              <button
+                onClick={() => {
+                  setRaceFinished(false);
+                  setFinalResults(null);
+                  setLastRaceResults(null);
+                  setShowSelection(true);
+                  setRaceStarted(false);
+                  setCurrentLap(null);
+                  setScenarios([]);
+                }}
+                style={{
+                  padding: '12px 28px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  backgroundColor: '#00bfff',
+                  color: '#0d1117',
+                  border: '1px solid #00bfff',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px',
+                  boxShadow: '0 0 20px rgba(0, 191, 255, 0.3)'
+                }}
+                onMouseOver={(e) => {
+                  e.target.style.backgroundColor = '#00d4ff';
+                  e.target.style.boxShadow = '0 0 30px rgba(0, 191, 255, 0.5)';
+                }}
+                onMouseOut={(e) => {
+                  e.target.style.backgroundColor = '#00bfff';
+                  e.target.style.boxShadow = '0 0 20px rgba(0, 191, 255, 0.3)';
+                }}
+              >
+                🏁 Start New Race
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

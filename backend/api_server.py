@@ -434,11 +434,6 @@ def make_decision(request: DecisionRequest):
         # Apply tactical pace modifier
         sim.state.total_race_time += session.pace_modifier
 
-        # Store position from lap 56 and maintain it through the finish
-        if lap == 56:
-            session.locked_position = position  # Use the calculated position, not sim.state.position
-            print(f"🔒 Locking position at P{session.locked_position} for final laps")
-
         # Tactical modes are now permanent - no auto-revert
 
         max_laps = sim.tire_model.COMPOUND_WEAR_RATES[sim.state.tire_compound]['max_laps']
@@ -447,6 +442,11 @@ def make_decision(request: DecisionRequest):
         # Calculate live position
         sim._session = session  # Store session reference for position calculation
         position, gap_ahead, gap_behind, leader_gap = calculate_live_position(sim, lap, session)
+        
+        # Store position from lap 56 and maintain it through the finish
+        if lap == 56:
+            session.locked_position = position  # Use the calculated position, not sim.state.position
+            print(f"🔒 Locking position at P{session.locked_position} for final laps")
         sim.state.position = position
 
         # === STRATEGY ENGINE: Gap-aware intelligent recommendations ===
@@ -565,11 +565,17 @@ def make_decision(request: DecisionRequest):
 
     # Race finished
     final_comparison = sim.get_final_comparison()
+    print(f"\n🏁 API SERVER: Sending final results to frontend:")
+    print(f"   Position: P{final_comparison['leaderboard_position']} / {final_comparison['total_drivers']}")
+    print(f"   Leaderboard entries: {len(final_comparison['full_leaderboard'])}")
+    print(f"   Winner: {final_comparison['full_leaderboard'][0]['driver']} - {final_comparison['full_leaderboard'][0]['time']:.1f}s")
+    
     return {
         "success": True,
         "message": "Race finished!",
         "raceFinished": True,
         "finalResults": final_comparison,
+        "strategies": [],  # No more decisions to make
         "currentLap": session.total_laps,
         "state": get_race_state_from_session(session)
     }
@@ -602,9 +608,22 @@ def calculate_live_position(sim, current_lap, session=None):
         driver_lap_counts[driver] = max_lap
 
     # Categorize drivers by laps completed
+    # On final lap (57), ONLY include drivers who completed the full race distance
+    # This ensures consistency with final classification
+    is_final_lap = calc_lap >= total_laps
+    
+    if is_final_lap:
+        print(f"🏁 FINAL LAP POSITION CALC: Filtering to only include drivers who completed {total_laps} laps")
+    
+    excluded_count = 0
     for driver in sim.race_data['DriverNumber'].unique():
         driver_laps = sim.race_data[sim.race_data['DriverNumber'] == driver]
         driver_max_lap = driver_lap_counts[driver]
+        
+        # On final lap, exclude drivers who didn't complete all laps (DNF/lapped)
+        if is_final_lap and driver_max_lap < total_laps:
+            excluded_count += 1
+            continue  # Skip this driver - they didn't finish
 
         # Calculate laps to compare (min of calc_lap and driver's max lap)
         compare_lap = min(calc_lap, driver_max_lap)
@@ -622,6 +641,9 @@ def calculate_live_position(sim, current_lap, session=None):
                 'laps': driver_max_lap,
                 'actual_time': cumulative_time
             })
+    
+    if is_final_lap:
+        print(f"   Included {len(standings)} drivers, excluded {excluded_count} drivers (DNF/lapped)")
 
     # Calculate position accounting for grid start
     # In F1, grid positions are ~8 meters apart
