@@ -61,7 +61,7 @@ function TireModal({ isOpen, onClose, tireData }) {
         {/* Header */}
         <div className="tire-modal-header">
           <div className="tire-modal-title">
-            <span className="tire-icon">🛞</span>
+            <span className="tire-icon"><img src="/tireagent.png" alt="Tire Agent" /></span>
             TIRE DATA ANALYSIS
           </div>
           <button className="tire-close-btn" onClick={handleClose}>✕</button>
