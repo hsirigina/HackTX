@@ -20,6 +20,7 @@ from data_agents import (
 )
 from coordinator_agent import CoordinatorAgent
 from arduino_controller import ArduinoController
+from race_comparison_engine import RaceComparisonEngine
 
 # Load environment
 load_dotenv()
@@ -60,6 +61,9 @@ class RaceMonitorV2:
 
         # Initialize AI coordinator (only called when events trigger it)
         self.coordinator = CoordinatorAgent(driver_name)
+
+        # Initialize race comparison engine for visual demo
+        self.comparison_engine = RaceComparisonEngine(race_id, driver_name)
 
         # Initialize Arduino controller
         self.arduino = None
@@ -252,6 +256,15 @@ class RaceMonitorV2:
 
         # Save agent status to database (every lap)
         self._save_agent_status(lap_number, lap_data)
+
+        # ========================================
+        # STEP 1.5: Run race comparison simulation (for visual demo)
+        # ========================================
+        try:
+            comparison_data = self.comparison_engine.simulate_lap(lap_number, total_laps=78)
+            self.comparison_engine.save_comparison_to_db(comparison_data)
+        except Exception as e:
+            print(f"⚠️  Comparison engine error: {e}")
 
         # ========================================
         # STEP 2: Check if we should call AI

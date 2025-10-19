@@ -40,16 +40,18 @@ class TireDegradationModel:
     # Pit stop time loss
     PIT_TIME_LOSS = 25  # seconds (includes pit lane travel + stop)
 
-    def __init__(self, total_laps: int = 78, base_laptime: float = 97.0):
+    def __init__(self, total_laps: int = 78, base_laptime: float = 97.0, driving_style_multiplier: float = 1.0):
         """
         Initialize tire degradation model.
 
         Args:
             total_laps: Total race distance in laps (Monaco = 78)
             base_laptime: Base lap time in seconds (no fuel, fresh tires)
+            driving_style_multiplier: Multiplier for tire wear based on driving style (0.5-3.0)
         """
         self.total_laps = total_laps
         self.base_laptime = base_laptime
+        self.driving_style_multiplier = driving_style_multiplier
 
         # Calculate fuel consumption per lap
         self.fuel_consumption_per_lap = self.FUEL_QUANTITY / total_laps
@@ -111,8 +113,9 @@ class TireDegradationModel:
         base = params['initial_laptime']
 
         # Tire degradation effect (linear with tire age)
+        # MULTIPLIED by driving style (aggressive = more wear, conservative = less)
         wear_rate = self.get_tire_wear_rate(compound, tire_age)
-        tire_deg = wear_rate * (tire_age - 1)
+        tire_deg = wear_rate * (tire_age - 1) * self.driving_style_multiplier
 
         # Fuel effect (car gets lighter as race progresses)
         fuel_correction = 0

@@ -257,27 +257,27 @@ def main():
 
     # Initialize replay
     replay = RaceReplay(
-        race_id="monaco_2024",
+        race_id="bahrain_2024",
         supabase_url=supabase_url,
         supabase_key=supabase_key,
-        laps_per_second=0.5  # 1 lap every 2 seconds
+        laps_per_second=5  # 5 laps per second = 0.2s per lap (FAST for demos!)
     )
 
-    # Load Monaco 2024 race
-    replay.load_race(2024, 'Monaco', 'R')
+    # Load Bahrain 2024 race - has ACTUAL pit strategy (2 stops)!
+    replay.load_race(2024, 'Bahrain', 'R')
 
     # Clear existing data
     replay.clear_race_data()
 
-    # Replay interesting portion of race (laps 60-78 = final stint)
-    # For full demo, use start_lap=1, end_lap=78
-    print("\n🎬 Starting replay of Monaco 2024 final stint (laps 60-78)...")
-    print("   This is where Leclerc held off Piastri for the win!")
+    # Replay full race (57 laps) - Leclerc pitted on laps 12 and 35
+    print("\n🎬 Starting replay of Bahrain 2024 (57 laps)...")
+    print("   Leclerc 2-stop strategy: Pit laps 12 and 35")
+    print("   This race has REAL pit strategy decisions!")
 
     replay.replay(
-        start_lap=60,
-        end_lap=78,
-        focused_driver='LEC'  # Focus on race winner Charles Leclerc
+        start_lap=1,
+        end_lap=57,
+        focused_driver='LEC'  # Charles Leclerc
     )
 
     print("\n" + "=" * 60)
