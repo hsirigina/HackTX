@@ -471,6 +471,9 @@ function AgentDashboard() {
     return (
       <div className="loading-container">
         <div className="loading-apex-title"></div>
+        <div className="loading-car-image">
+          <img src="/carIn Start.png" alt="F1 Car" />
+        </div>
         <div className="loading-spinner"></div>
         <div className="loading-text">INITIALIZING MULTI-AGENT SYSTEM</div>
       </div>
