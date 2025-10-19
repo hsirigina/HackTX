@@ -10,7 +10,8 @@
       "Bash(python api_server.py)",
       "Bash(cat main.jsx)",
       "Bash(cat /Users/renjit_joseph/Documents/GitHub/HackTX/frontend/src/main.jsx)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(git checkout frontend/src/AgentDashboard.jsx frontend/src/AgentDashboard.css)"
     ],
     "deny": [],
     "ask": []

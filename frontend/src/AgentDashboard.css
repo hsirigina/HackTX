@@ -778,9 +778,9 @@
 
 /* Final Results Container */
 .final-results-container {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
   padding: 20px;
   max-height: calc(100vh - 200px);
   overflow-y: auto;
@@ -796,6 +796,8 @@
   padding: 25px;
   box-shadow: 0 0 30px rgba(255, 215, 0, 0.3);
   animation: fadeIn 0.5s ease;
+  max-width: 600px;
+  width: 100%;
 }
 
 .section-header {

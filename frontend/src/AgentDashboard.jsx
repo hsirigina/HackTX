@@ -390,75 +390,28 @@ function AgentDashboard() {
           {/* Swipable Scenario Carousel OR Final Results */}
           {raceFinished ? (
             <div className="final-results-container">
-              <div className="results-header">
-                <div className="results-icon">🏁</div>
-                <div className="results-title">RACE FINISHED!</div>
-              </div>
-
               {finalResults && (
-                <>
-                  <div className="race-performance-section">
-                    <div className="section-header">🏆 YOUR RACE PERFORMANCE</div>
-                    <div className="performance-grid">
-                      <div className="perf-stat">
-                        <span className="perf-label">Your time:</span>
-                        <span className="perf-value">{finalResults.user_time.toFixed(1)}s</span>
-                      </div>
-                      <div className="perf-stat">
-                        <span className="perf-label">Winner's time:</span>
-                        <span className="perf-value">{finalResults.full_leaderboard[0].time.toFixed(1)}s</span>
-                      </div>
-                      <div className="perf-stat">
-                        <span className="perf-label">Gap to winner:</span>
-                        <span className="perf-value highlight">+{finalResults.gap_to_winner.toFixed(1)}s</span>
-                      </div>
-                      <div className="perf-stat">
-                        <span className="perf-label">Final position:</span>
-                        <span className="perf-value highlight">P{finalResults.leaderboard_position} / {finalResults.total_drivers}</span>
-                      </div>
+                <div className="race-performance-section">
+                  <div className="section-header">🏆 YOUR RACE PERFORMANCE</div>
+                  <div className="performance-grid">
+                    <div className="perf-stat">
+                      <span className="perf-label">Your time:</span>
+                      <span className="perf-value">{finalResults.user_time.toFixed(1)}s</span>
+                    </div>
+                    <div className="perf-stat">
+                      <span className="perf-label">Winner's time:</span>
+                      <span className="perf-value">{finalResults.full_leaderboard[0].time.toFixed(1)}s</span>
+                    </div>
+                    <div className="perf-stat">
+                      <span className="perf-label">Gap to winner:</span>
+                      <span className="perf-value highlight">+{finalResults.gap_to_winner.toFixed(1)}s</span>
+                    </div>
+                    <div className="perf-stat">
+                      <span className="perf-label">Final position:</span>
+                      <span className="perf-value highlight">P{finalResults.leaderboard_position} / {finalResults.total_drivers}</span>
                     </div>
                   </div>
-
-                  <div className="leaderboard-section">
-                    <div className="section-header">📊 LEADERBOARD (Your Position)</div>
-                    <div className="leaderboard-grid">
-                      {finalResults.nearby_drivers.map((driver, idx) => (
-                        <div key={idx} className={`leaderboard-row ${driver.driver === 'YOU' ? 'your-position' : ''}`}>
-                          <span className="driver-marker">{driver.driver === 'YOU' ? '👉' : ''}</span>
-                          <span className="driver-code">{driver.driver}</span>
-                          <span className="team-name">{driver.team}</span>
-                          <span className="time">{driver.time.toFixed(1)}s</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="strategy-summary-section">
-                    <div className="section-header">📋 YOUR STRATEGY</div>
-                    <div className="summary-grid">
-                      <div className="summary-stat">
-                        <strong>Pit stops:</strong> {finalResults.pit_stops}
-                      </div>
-                      {finalResults.pit_stop_details.map((pit, idx) => (
-                        <div key={idx} className="pit-detail">
-                          Pit {idx + 1}: Lap {pit.lap} → {pit.compound} tires
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="decision-timeline-section">
-                    <div className="section-header">📋 DECISION TIMELINE</div>
-                    <div className="timeline-grid">
-                      {finalResults.decision_timeline.map((decision, idx) => (
-                        <div key={idx} className="timeline-item">
-                          <span className="lap-num">Lap {decision.lap}:</span>
-                          <span className="decision-text">{decision.title}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
+                </div>
               )}
             </div>
           ) : (
