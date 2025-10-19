@@ -21,50 +21,188 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
 
   if (!isOpen) return null
 
-  // Mock data for position metrics
-  const mockData = {
-    currentPosition: positionData?.position || 3,
-    gapAhead: positionData?.gap_ahead || '+0.5',
-    gapBehind: positionData?.gap_behind || '-1.2',
-    positionsGained: 0,
+  const currentPosition = Number(positionData?.position) || 3
 
-    // Live race positions
-    positions: [
-      { pos: 1, driver: 'VER', gap: 'LEADER', tire: 'M', team: 'Red Bull', arrow: null },
-      { pos: 2, driver: 'LEC', gap: '+2.345', tire: 'M', team: 'Ferrari', arrow: null },
-      { pos: 3, driver: 'YOU', gap: '+4.567', tire: 'S', team: 'You', arrow: null, isYou: true },
-      { pos: 4, driver: 'PIA', gap: '+6.123', tire: 'M', team: 'McLaren', arrow: null },
-      { pos: 5, driver: 'RUS', gap: '+8.901', tire: 'M', team: 'Mercedes', arrow: '▲' },
-      { pos: 6, driver: 'HAM', gap: '+10.234', tire: 'M', team: 'Mercedes', arrow: '▼' },
-      { pos: 7, driver: 'ALO', gap: '+12.567', tire: 'H', team: 'Aston Martin', arrow: null },
-      { pos: 8, driver: 'STR', gap: '+15.890', tire: 'H', team: 'Aston Martin', arrow: null },
-      { pos: 9, driver: 'SAI', gap: '+18.123', tire: 'M', team: 'Ferrari', arrow: '▲' },
-      { pos: 10, driver: 'BOT', gap: '+20.456', tire: 'H', team: 'Kick Sauber', arrow: '▼' }
-    ],
-
-    // Position history
-    history: [
-      { lap: 1, position: 3, change: 'START' },
-      { lap: Math.max(5, Math.floor((currentLap || 1) / 2)), position: positionData?.position || 3, change: '---' },
-      { lap: currentLap || 1, position: positionData?.position || 3, change: 'CURRENT' }
-    ],
-
-    // Battle data
-    battles: [
-      {
-        title: `BATTLE FOR P${positionData?.position || 3}`,
-        ahead: { pos: (positionData?.position || 3) - 1, driver: 'LEC', team: 'Ferrari' },
-        behind: { pos: positionData?.position || 3, driver: 'YOU', team: 'You' },
-        gap: '+0.189'
-      },
-      {
-        title: 'BATTLE FOR P9th',
-        ahead: { pos: 9, driver: 'SAI', team: 'Ferrari' },
-        behind: { pos: 10, driver: 'BOT', team: 'Kick Sauber' },
-        gap: '+0.324'
-      }
-    ]
+  const formatGap = (value) => {
+    if (value === null || value === undefined) return '--'
+    if (typeof value === 'string') {
+      const trimmed = value.trim()
+      if (!trimmed.length) return '--'
+      return trimmed
+    }
+    const numeric = Number(value)
+    if (Number.isNaN(numeric)) return '--'
+    if (Math.abs(numeric) < 0.05) return 'LEADER'
+    return `${numeric > 0 ? '+' : ''}${numeric.toFixed(2)}s`
   }
+
+  const normalizeArrow = (value) => {
+    if (!value) return null
+    if (value === '▲' || value === '▼') return value
+    const lowered = String(value).toLowerCase()
+    if (['up', 'gain', 'gaining', 'positive', 'improving'].includes(lowered)) return '▲'
+    if (['down', 'loss', 'losing', 'negative', 'falling'].includes(lowered)) return '▼'
+    return null
+  }
+
+  const normalizeTire = (value) => {
+    if (!value) return '--'
+    const upper = String(value).toUpperCase()
+    if (upper.length <= 2) return upper
+    if (['SOFT', 'MEDIUM', 'HARD'].includes(upper)) {
+      return upper.startsWith('SO') ? 'S' : upper.startsWith('ME') ? 'M' : 'H'
+    }
+    return upper
+  }
+
+  const fallbackDriverOrder = ['VER', 'PER', 'LEC', 'SAI', 'NOR', 'PIA', 'HAM', 'RUS', 'ALO', 'STR', 'GAS', 'OCO', 'TSU', 'RIC', 'ALB', 'SAR', 'BOT', 'ZHO', 'MAG', 'HUL']
+  const fallbackTires = ['S', 'M', 'H']
+
+  const createFallbackPositions = () => {
+    const windowSize = 10
+    let startPos = currentPosition - Math.floor(windowSize / 2)
+    startPos = Math.max(1, startPos)
+    if (startPos + windowSize - 1 > 20) {
+      startPos = Math.max(1, 20 - windowSize + 1)
+    }
+
+    const positions = []
+    for (let i = 0; i < windowSize && startPos + i <= 20; i += 1) {
+      const pos = startPos + i
+      const isYou = pos === currentPosition
+      const driverIndex = (pos - 1) % fallbackDriverOrder.length
+      const driver = isYou ? 'YOU' : fallbackDriverOrder[driverIndex]
+      const leaderGap = pos === startPos ? 'LEADER' : `+${(Math.abs(pos - startPos) * 1.5 + (isYou ? 0.0 : 1.8)).toFixed(2)}s`
+      positions.push({
+        pos,
+        driver,
+        gap: leaderGap,
+        tire: isYou ? normalizeTire(positionData?.tire || positionData?.tire_compound || positionData?.compound || 'S') : fallbackTires[i % fallbackTires.length],
+        team: isYou ? 'You' : 'Rival Team',
+        arrow: null,
+        isYou
+      })
+    }
+
+    if (!positions.some((entry) => entry.isYou)) {
+      positions.push({
+        pos: currentPosition,
+        driver: 'YOU',
+        gap: formatGap(positionData?.gap_ahead),
+        tire: normalizeTire(positionData?.tire || positionData?.tire_compound || positionData?.compound || 'S'),
+        team: 'You',
+        arrow: null,
+        isYou: true
+      })
+    }
+
+    return positions.sort((a, b) => a.pos - b.pos)
+  }
+
+  const rawPositions =
+    (Array.isArray(positionData?.live_positions) && positionData.live_positions) ||
+    (Array.isArray(positionData?.positions) && positionData.positions) ||
+    (Array.isArray(positionData?.livePositions) && positionData.livePositions) ||
+    []
+
+  const normalizedPositions = rawPositions
+    .map((entry, index) => {
+      if (!entry) return null
+      const positionNumber = Number(entry.pos ?? entry.position ?? entry.rank ?? (index + 1))
+      const driver = entry.driver ?? entry.code ?? entry.name ?? `DRV${positionNumber}`
+      const gapValue = entry.gap ?? entry.interval ?? entry.interval_seconds ?? entry.gap_to_leader
+      const tireValue = entry.tire ?? entry.compound ?? entry.tyre ?? entry.tyre_compound
+      const teamValue = entry.team ?? entry.constructor ?? entry.team_name ?? ''
+      const arrowValue = entry.arrow ?? entry.trend ?? entry.delta
+
+      return {
+        pos: Number.isNaN(positionNumber) ? index + 1 : positionNumber,
+        driver: String(driver).toUpperCase(),
+        gap: formatGap(gapValue),
+        tire: normalizeTire(tireValue),
+        team: teamValue,
+        arrow: normalizeArrow(arrowValue),
+        isYou: entry.isYou === true || String(driver).toUpperCase() === 'YOU' || Number(positionNumber) === currentPosition
+      }
+    })
+    .filter(Boolean)
+    .sort((a, b) => a.pos - b.pos)
+
+  const positions = normalizedPositions.length ? normalizedPositions : createFallbackPositions()
+
+  const gapAhead = formatGap(positionData?.gap_ahead)
+  const gapBehind = formatGap(positionData?.gap_behind)
+
+  const startingPosition = Number(
+    positionData?.starting_position ??
+    positionData?.startingPosition ??
+    positionData?.grid_position ??
+    positionData?.gridPosition
+  )
+
+  const positionsGainedValue = Number(
+    positionData?.positions_gained ??
+    positionData?.positionsGained ??
+    (Number.isFinite(startingPosition) ? startingPosition - currentPosition : 0)
+  )
+
+  const positionsGainedDisplay = Number.isFinite(positionsGainedValue)
+    ? `${positionsGainedValue > 0 ? '+' : ''}${positionsGainedValue}`
+    : '+0'
+
+  const positionsGainedClass =
+    Number.isFinite(positionsGainedValue) && positionsGainedValue < 0
+      ? 'position-stat-value negative'
+      : Number.isFinite(positionsGainedValue) && positionsGainedValue > 0
+        ? 'position-stat-value positive'
+        : 'position-stat-value'
+
+  const historyEntries = Array.isArray(positionData?.history) && positionData.history.length
+    ? positionData.history.map((item, index) => ({
+        lap: item.lap ?? item.lap_number ?? item.lapNumber ?? index + 1,
+        position: item.position ?? item.pos ?? currentPosition,
+        change: item.change ?? item.status ?? ''
+      })).filter((item) => item.lap && item.position)
+    : [
+        { lap: 1, position: Number.isFinite(startingPosition) ? startingPosition : currentPosition, change: 'Start' },
+        { lap: Math.max(2, Math.floor((currentLap || currentPosition) / 2)), position: currentPosition, change: 'Mid' },
+        { lap: currentLap || 1, position: currentPosition, change: 'Current' }
+      ]
+
+  const battleEntries = Array.isArray(positionData?.battles) && positionData.battles.length
+    ? positionData.battles.map((battle, index) => ({
+        title: battle.title ?? battle.name ?? `Battle for P${battle.target_position ?? currentPosition}`,
+        ahead: {
+          pos: battle.ahead?.position ?? battle.ahead_pos ?? (battle.target_position ?? currentPosition) - 1,
+          driver: battle.ahead?.driver ?? battle.ahead_driver ?? '---',
+          team: battle.ahead?.team ?? battle.ahead_team ?? ''
+        },
+        behind: {
+          pos: battle.behind?.position ?? battle.behind_pos ?? (battle.target_position ?? currentPosition),
+          driver: battle.behind?.driver ?? battle.behind_driver ?? '---',
+          team: battle.behind?.team ?? battle.behind_team ?? ''
+        },
+        gap: formatGap(battle.gap ?? battle.interval ?? battle.delta)
+      }))
+    : [
+        {
+          title: `Battle for P${currentPosition}`,
+          ahead: { pos: Math.max(1, currentPosition - 1), driver: 'RIVAL', team: 'Ferrari' },
+          behind: { pos: currentPosition, driver: 'YOU', team: 'You' },
+          gap: formatGap(positionData?.gap_ahead ?? 0.2)
+        },
+        {
+          title: `Battle for P${Math.min(currentPosition + 2, 20)}`,
+          ahead: { pos: Math.min(currentPosition + 1, 20), driver: 'CHASE', team: 'Mercedes' },
+          behind: { pos: Math.min(currentPosition + 2, 20), driver: 'PRESS', team: 'McLaren' },
+          gap: '+0.32s'
+        }
+      ]
+
+  const raceNameRaw = positionData?.race_name ?? positionData?.raceName ?? 'Bahrain Grand Prix'
+  const raceName = typeof raceNameRaw === 'string' ? raceNameRaw.toUpperCase() : 'BAHRAIN GRAND PRIX'
+  const totalLaps = Number(positionData?.total_laps ?? positionData?.totalLaps ?? positionData?.laps ?? 57)
+  const raceLocation = positionData?.location ?? positionData?.track ?? 'Sakhir, Bahrain'
 
   return (
     <div className={`position-modal-overlay ${animateIn ? 'active' : ''}`} onClick={handleClose}>
@@ -86,20 +224,20 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
             <div className="position-stats-header">
               <div className="position-stat-item large">
                 <div className="position-stat-label">CURRENT POSITION</div>
-                <div className="position-stat-value-large">P{mockData.currentPosition}</div>
+                <div className="position-stat-value-large">P{currentPosition}</div>
               </div>
               <div className="position-stat-grid">
                 <div className="position-stat-item">
                   <div className="position-stat-label">GAP AHEAD</div>
-                  <div className="position-stat-value">{mockData.gapAhead}</div>
+                  <div className="position-stat-value">{gapAhead}</div>
                 </div>
                 <div className="position-stat-item">
                   <div className="position-stat-label">GAP BEHIND</div>
-                  <div className="position-stat-value">{mockData.gapBehind}</div>
+                  <div className="position-stat-value">{gapBehind}</div>
                 </div>
                 <div className="position-stat-item">
                   <div className="position-stat-label">GAINED</div>
-                  <div className="position-stat-value positive">+{mockData.positionsGained}</div>
+                  <div className={positionsGainedClass}>{positionsGainedDisplay}</div>
                 </div>
               </div>
             </div>
@@ -108,15 +246,19 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
             <div className="live-positions-section">
               <div className="section-title">LIVE RACE POSITIONS - LAP {currentLap || 1}</div>
               <div className="race-positions-grid">
-                {mockData.positions.map((p, idx) => (
-                  <div key={idx} className={`position-row ${p.isYou ? 'your-position' : ''} ${p.pos === 1 ? 'leader' : ''}`}>
-                    <div className="pos-number">{p.pos}</div>
-                    <div className="pos-arrow">{p.arrow && <span className={p.arrow === '▲' ? 'arrow-up' : 'arrow-down'}>{p.arrow}</span>}</div>
-                    <div className="pos-driver-name">{p.driver}</div>
-                    <div className="pos-gap">{p.gap}</div>
-                    <div className="pos-tire-compound">{p.tire}</div>
-                  </div>
-                ))}
+                {positions.length ? (
+                  positions.map((p, idx) => (
+                    <div key={`${p.driver}-${p.pos}-${idx}`} className={`position-row ${p.isYou ? 'your-position' : ''} ${p.pos === 1 ? 'leader' : ''}`}>
+                      <div className="pos-number">{p.pos}</div>
+                      <div className="pos-arrow">{p.arrow && <span className={p.arrow === '▲' ? 'arrow-up' : 'arrow-down'}>{p.arrow}</span>}</div>
+                      <div className="pos-driver-name">{p.driver}</div>
+                      <div className="pos-gap">{p.gap}</div>
+                      <div className="pos-tire-compound">{p.tire}</div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="position-empty-state">Live position data unavailable</div>
+                )}
               </div>
             </div>
           </div>
@@ -127,10 +269,10 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
             <div className="position-history-section">
               <div className="section-title">POSITION HISTORY</div>
               <div className="history-grid">
-                {mockData.history.map((h, idx) => (
-                  <div key={idx} className="history-item">
+                {historyEntries.map((h, idx) => (
+                  <div key={`${h.lap}-${idx}`} className="history-item">
                     <span className="history-lap">Lap {h.lap}</span>
-                    <span className={`history-pos ${h.change === 'CURRENT' ? 'highlight' : ''}`}>P{h.position}</span>
+                    <span className={`history-pos ${String(h.change).toUpperCase() === 'CURRENT' ? 'highlight' : ''}`}>P{h.position}</span>
                     <span className="history-change">{h.change}</span>
                   </div>
                 ))}
@@ -141,8 +283,8 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
             <div className="battles-section">
               <div className="section-title">ACTIVE BATTLES</div>
               <div className="battles-grid">
-                {mockData.battles.map((battle, idx) => (
-                  <div key={idx} className="battle-card">
+                {battleEntries.map((battle, idx) => (
+                  <div key={`${battle.title}-${idx}`} className="battle-card">
                     <div className="battle-header">{battle.title}</div>
                     <div className="battle-drivers">
                       <div className="battle-driver ahead">
@@ -164,9 +306,9 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
 
             {/* Race Info */}
             <div className="race-info-section">
-              <div className="race-info-label">BAHRAIN GRAND PRIX</div>
-              <div className="race-info-lap">LAP {currentLap || 1} / 57</div>
-              <div className="race-info-location">Sakhir, Bahrain</div>
+              <div className="race-info-label">{raceName}</div>
+              <div className="race-info-lap">LAP {currentLap || 1} / {Number.isFinite(totalLaps) && totalLaps > 0 ? totalLaps : '--'}</div>
+              <div className="race-info-location">{raceLocation}</div>
             </div>
           </div>
         </div>
