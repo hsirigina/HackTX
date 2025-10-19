@@ -203,12 +203,26 @@ function AgentDashboard() {
   // Parse agent insights from race state
   const parseInsights = () => {
     const avgLapTime = raceState.totalRaceTime / Math.max(currentLap || 1, 1)
+    
+    // Calculate tire degradation percentage based on compound max laps
+    const maxLaps = {
+      'SOFT': 25,
+      'MEDIUM': 40,
+      'HARD': 60
+    }
+    const tireMaxLaps = maxLaps[raceState.tireCompound] || 40
+    const tireDegradationPct = Math.min(100, ((raceState.tireAge || 0) / tireMaxLaps * 100))
+    
+    // Format degradation display: show seconds if available, otherwise percentage
+    const degradationDisplay = raceState.tireDegradation !== undefined 
+      ? `+${raceState.tireDegradation.toFixed(2)}s (${tireDegradationPct.toFixed(0)}%)`
+      : `${tireDegradationPct.toFixed(0)}%`
 
     return {
       tire: {
         compound: raceState.tireCompound || 'SOFT',
         tire_age: raceState.tireAge || 0,
-        degradation: '+0.0',
+        degradation: degradationDisplay,
         status: 'active',
         triggers: raceState.tireAge > 20 ? [
           { message: `High tire wear (${raceState.tireAge} laps)`, urgency: 'HIGH' }
@@ -240,7 +254,7 @@ function AgentDashboard() {
   }
 
   const insights = raceStarted ? parseInsights() : {
-    tire: { compound: '--', tire_age: 0, degradation: '--', status: 'active', triggers: [] },
+    tire: { compound: '--', tire_age: 0, degradation: '0%', status: 'active', triggers: [] },
     laptime: { current_time: '--', avg_time: '--', trend: '--', status: 'active', triggers: [] },
     position: { position: '--', gap_ahead: '--', gap_behind: '--', status: 'active', triggers: [] },
     competitor: { threats: 0, pit_status: '--', status: 'active', triggers: [] }
@@ -406,7 +420,7 @@ function AgentDashboard() {
               </div>
               <div className="metric">
                 <span className="metric-label">DEGRADATION</span>
-                <span className="metric-value">{insights.tire.degradation || '+0.0'}s</span>
+                <span className="metric-value">{insights.tire.degradation || '0%'}</span>
               </div>
             </div>
 

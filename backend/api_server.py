@@ -716,7 +716,15 @@ def get_race_state_from_session(session):
     gap_ahead_str = "Leader" if gap_ahead == 0 else f"{gap_ahead:+.1f}s"
     gap_behind_str = "Last" if gap_behind == 0 else f"{gap_behind:+.1f}s"
 
-    print(f"🔍 State returned: P{position} | Gap ahead: {gap_ahead_str} | Gap behind: {gap_behind_str}")
+    # Calculate tire degradation
+    tire_degradation = 0.0
+    if sim.tire_model and sim.state.tire_age > 0:
+        tire_degradation = sim.tire_model.get_degradation_rate(
+            sim.state.tire_compound, 
+            sim.state.tire_age
+        )
+
+    print(f"🔍 State returned: P{position} | Gap ahead: {gap_ahead_str} | Gap behind: {gap_behind_str} | Tire deg: +{tire_degradation:.2f}s")
 
     return {
         "position": position,
@@ -724,6 +732,7 @@ def get_race_state_from_session(session):
         "gapBehind": gap_behind_str,
         "tireCompound": sim.state.tire_compound,
         "tireAge": sim.state.tire_age,
+        "tireDegradation": tire_degradation,
         "drivingStyle": sim.state.driving_style.value,
         "totalRaceTime": sim.state.total_race_time,
         "pitStops": len(sim.state.pit_stops)
