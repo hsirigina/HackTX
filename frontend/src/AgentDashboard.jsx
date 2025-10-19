@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
 import TireModal from './TireModal'
@@ -18,6 +18,8 @@ function AgentDashboard() {
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
   const [isSliding, setIsSliding] = useState(false)
+  const [swipeOffset, setSwipeOffset] = useState(0)
+  const [isSwiping, setIsSwiping] = useState(false)
   const [raceState, setRaceState] = useState({
     position: 3,
     tireCompound: 'SOFT',
@@ -47,6 +49,9 @@ function AgentDashboard() {
   const [showF1Lights, setShowF1Lights] = useState(false)
   const [lightsSequence, setLightsSequence] = useState(0)
 
+  // Ref for gesture cooldown (persists across re-renders)
+  const lastGestureTimeRef = useRef(0)
+
   // Load available races on mount
   useEffect(() => {
     loadAvailableRaces()
@@ -54,8 +59,7 @@ function AgentDashboard() {
 
   // Poll gesture server for hand gestures
   useEffect(() => {
-    let lastGestureTime = 0
-    const GESTURE_COOLDOWN = 1000 // 1 second cooldown between gestures
+    const GESTURE_COOLDOWN = 2000 // 2 second cooldown between gestures
 
     const pollGestures = async () => {
       try {
@@ -69,8 +73,11 @@ function AgentDashboard() {
 
         const now = Date.now()
 
-        // Check if enough time has passed since last gesture
-        if (now - lastGestureTime < GESTURE_COOLDOWN) {
+        // Check if enough time has passed since last gesture (using ref)
+        if (now - lastGestureTimeRef.current < GESTURE_COOLDOWN) {
+          if (data.gesture !== 'No Gesture') {
+            console.log('⏱️ Gesture on cooldown. Time since last:', now - lastGestureTimeRef.current, 'ms')
+          }
           return
         }
 
@@ -79,13 +86,13 @@ function AgentDashboard() {
           if (data.gesture === 'Swipe Left' && currentScenarioIndex < scenarios.length - 1) {
             console.log('✅ Detected Swipe Left - Moving to next scenario')
             goToNextScenario()
-            lastGestureTime = now
+            lastGestureTimeRef.current = now
             // Clear the gesture
             await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
           } else if (data.gesture === 'Swipe Right' && currentScenarioIndex > 0) {
             console.log('✅ Detected Swipe Right - Moving to previous scenario')
             goToPrevScenario()
-            lastGestureTime = now
+            lastGestureTimeRef.current = now
             // Clear the gesture
             await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
           } else if (data.gesture === 'Peace Sign' || data.gesture === 'V Sign') {
@@ -94,7 +101,7 @@ function AgentDashboard() {
             if (currentScenario) {
               handleScenarioSelect(currentScenario)
             }
-            lastGestureTime = now
+            lastGestureTimeRef.current = now
             // Clear the gesture
             await fetch('http://localhost:5001/api/gesture/clear', { method: 'POST' })
           } else if (data.gesture !== 'No Gesture') {
@@ -208,9 +215,9 @@ function AgentDashboard() {
     setShowF1Lights(true)
     setLightsSequence(0)
     
-    // F1 lights sequence: 5 lights, each 1 second apart, then 2-4 second random delay
-    const lightTimings = [1000, 2000, 3000, 4000, 5000] // 5 lights
-    const randomDelay = 2000 + Math.random() * 2000 // 2-4 seconds random delay
+    // F1 lights sequence: 5 lights, each 0.6 seconds apart, then 1-2 second random delay
+    const lightTimings = [600, 1200, 1800, 2400, 3000] // 5 lights, faster
+    const randomDelay = 1000 + Math.random() * 1000 // 1-2 seconds random delay (faster)
     
     lightTimings.forEach((timing, index) => {
       setTimeout(() => {
@@ -224,8 +231,8 @@ function AgentDashboard() {
       setTimeout(() => {
         setShowF1Lights(false)
         console.log('🏁 F1 Lights complete - Scenarios available:', scenarios.length)
-      }, 1000)
-    }, 5000 + randomDelay)
+      }, 500) // Faster transition to race
+    }, 3000 + randomDelay)
   }
 
   // Parse agent insights from race state
@@ -343,14 +350,20 @@ function AgentDashboard() {
           recommendation_type: 'RACE FINISHED',
           reasoning: 'Race completed!'
         }, ...prev])
+        setLoading(false)
       } else {
         setCurrentLap(data.currentLap || currentLap)
-        setScenarios(data.strategies || [])
         setRaceState(data.state || raceState)
+        
+        // Clear scenarios briefly, then show new ones after delay
+        setScenarios([])
         setCurrentScenarioIndex(0)
+        
+        setTimeout(() => {
+          setScenarios(data.strategies || [])
+          setLoading(false)
+        }, 500) // Half second delay before showing new strategies
       }
-
-      setLoading(false)
     } catch (error) {
       console.error('Failed to make decision:', error)
       alert(`Error making decision: ${error.message}. Please check that the backend is running.`)
@@ -358,28 +371,63 @@ function AgentDashboard() {
     }
   }
 
-  // Swipe handlers
+  // Swipe handlers with smooth real-time tracking
   const handleTouchStart = (e) => {
     setTouchStart(e.targetTouches[0].clientX)
+    setIsSwiping(true)
+    setIsSliding(false)
   }
 
   const handleTouchMove = (e) => {
-    setTouchEnd(e.targetTouches[0].clientX)
+    if (!touchStart) return
+    
+    const currentTouch = e.targetTouches[0].clientX
+    const diff = currentTouch - touchStart
+    
+    // Calculate swipe offset as percentage of card width
+    // Limit the swipe to prevent going past boundaries
+    const maxOffset = 30 // Max 30% movement during swipe
+    let offsetPercent = (diff / window.innerWidth) * 100
+    
+    // Prevent swiping beyond first/last card
+    if (currentScenarioIndex === 0 && offsetPercent > 0) {
+      offsetPercent = offsetPercent * 0.2 // Rubber band effect at start
+    } else if (currentScenarioIndex === scenarios.length - 1 && offsetPercent < 0) {
+      offsetPercent = offsetPercent * 0.2 // Rubber band effect at end
+    }
+    
+    // Clamp offset
+    offsetPercent = Math.max(-maxOffset, Math.min(maxOffset, offsetPercent))
+    
+    setSwipeOffset(offsetPercent)
+    setTouchEnd(currentTouch)
   }
 
   const handleTouchEnd = () => {
-    if (!touchStart || !touchEnd) return
-
-    const distance = touchStart - touchEnd
-    const isLeftSwipe = distance > 50
-    const isRightSwipe = distance < -50
+    if (!touchStart) return
+    
+    setIsSwiping(false)
+    setIsSliding(true)
+    
+    const distance = touchStart - (touchEnd || touchStart)
+    const swipeThreshold = 75 // pixels
+    const isLeftSwipe = distance > swipeThreshold
+    const isRightSwipe = distance < -swipeThreshold
 
     if (isLeftSwipe && currentScenarioIndex < scenarios.length - 1) {
       goToNextScenario()
-    }
-    if (isRightSwipe && currentScenarioIndex > 0) {
+    } else if (isRightSwipe && currentScenarioIndex > 0) {
       goToPrevScenario()
+    } else {
+      // Snap back to current position
+      setSwipeOffset(0)
     }
+
+    // Reset after animation completes
+    setTimeout(() => {
+      setSwipeOffset(0)
+      setIsSliding(false)
+    }, 300)
 
     setTouchStart(0)
     setTouchEnd(0)
@@ -389,11 +437,12 @@ function AgentDashboard() {
     console.log('🔄 goToPrevScenario called - Current:', currentScenarioIndex, 'Scenarios:', scenarios.length, 'IsSliding:', isSliding)
     if (currentScenarioIndex > 0) {
       setIsSliding(true)
+      setSwipeOffset(0) // Reset any swipe offset
       setCurrentScenarioIndex(currentScenarioIndex - 1)
       console.log('✅ Moving to previous scenario:', currentScenarioIndex - 1)
       setTimeout(() => {
         setIsSliding(false)
-      }, 150) // Much faster timeout
+      }, 300) // Faster animation
     } else {
       console.log('❌ Cannot go to previous - Current:', currentScenarioIndex)
     }
@@ -403,11 +452,12 @@ function AgentDashboard() {
     console.log('🔄 goToNextScenario called - Current:', currentScenarioIndex, 'Scenarios:', scenarios.length, 'IsSliding:', isSliding)
     if (currentScenarioIndex < scenarios.length - 1) {
       setIsSliding(true)
+      setSwipeOffset(0) // Reset any swipe offset
       setCurrentScenarioIndex(currentScenarioIndex + 1)
       console.log('✅ Moving to next scenario:', currentScenarioIndex + 1)
       setTimeout(() => {
         setIsSliding(false)
-      }, 150) // Much faster timeout
+      }, 300) // Faster animation
     } else {
       console.log('❌ Cannot go to next - Current:', currentScenarioIndex, 'Max:', scenarios.length - 1)
     }
@@ -950,8 +1000,9 @@ function AgentDashboard() {
                   <div
                     className="carousel-inner"
                     style={{
-                      transform: `translateX(-${currentScenarioIndex * 100}%)`,
-                      transition: isSliding ? 'transform 0.4s ease-in-out' : 'none'
+                      transform: `translateX(calc(-${currentScenarioIndex * 100}% + ${swipeOffset}%))`,
+                      transition: isSwiping ? 'none' : 'transform 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94)',
+                      willChange: 'transform'
                     }}
                   >
                     {scenarios.map((scenario, index) => (
