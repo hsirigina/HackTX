@@ -239,29 +239,10 @@ function AgentDashboard() {
 
   if (initialLoading) {
     return (
-      <div className="loading-road-container">
-        {/* Road */}
-        <div className="road">
-          {/* Animated lane divider lines */}
-          <div className="road-lines">
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-            <div className="road-line"></div>
-          </div>
-          {/* Car moving lane to lane */}
-          <div className="loading-car-wrapper">
-            <img src="/samller2.png" alt="Racing car" className="loading-car-image" />
-          </div>
-        </div>
+      <div className="loading-container">
+        <div className="loading-apex-title"></div>
+        <div className="loading-spinner"></div>
+        <div className="loading-text">INITIALIZING F1 STRATEGY SYSTEM...</div>
       </div>
     )
   }
