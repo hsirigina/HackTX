@@ -32,7 +32,7 @@ class GestureRecognizer:
     PEACE_SIGN = "Peace Sign"
     NO_GESTURE = "No Gesture"
     
-    def __init__(self, confidence_threshold=0.85, detection_confidence=0.7, tracking_confidence=0.7):
+    def __init__(self, confidence_threshold=0.75, detection_confidence=0.7, tracking_confidence=0.7):
         """
         Initialize gesture recognizer
         
@@ -61,7 +61,7 @@ class GestureRecognizer:
         # State tracking
         self.last_gesture = None
         self.last_gesture_time = 0
-        self.gesture_cooldown = 1.0  # seconds - increased to prevent false positives
+        self.gesture_cooldown = 0.3  # Minimal cooldown to prevent duplicate detections
         
     def _is_finger_extended(self, landmarks, finger_tip_id, finger_pip_id, finger_mcp_id):
         """Check if a finger is extended"""
@@ -80,6 +80,23 @@ class GestureRecognizer:
         
         # Thumb extends horizontally
         return abs(thumb_tip.x - thumb_mcp.x) > abs(thumb_ip.x - thumb_mcp.x)
+    
+    def _is_hand_open(self, landmarks):
+        """Check if hand is open (at least 3 fingers extended)"""
+        fingers_extended = 0
+        
+        # Check each finger
+        if self._is_finger_extended(landmarks, 8, 6, 5):  # Index
+            fingers_extended += 1
+        if self._is_finger_extended(landmarks, 12, 10, 9):  # Middle
+            fingers_extended += 1
+        if self._is_finger_extended(landmarks, 16, 14, 13):  # Ring
+            fingers_extended += 1
+        if self._is_finger_extended(landmarks, 20, 18, 17):  # Pinky
+            fingers_extended += 1
+        
+        # Hand is "open" if at least 3 fingers are extended
+        return fingers_extended >= 3
     
     def _detect_thumbs_up(self, landmarks):
         """Detect thumbs up (only thumb extended upward)"""
@@ -138,7 +155,7 @@ class GestureRecognizer:
         dx = end_x - start_x
         
         # Lowered threshold for easier detection
-        movement_threshold = 0.10  # Reduced from 0.15 (10% of frame)
+        movement_threshold = 0.08  # 8% of frame - more sensitive
         
         if abs(dx) > movement_threshold:
             # Check if movement is generally consistent (allow some jitter)
@@ -213,11 +230,18 @@ class GestureRecognizer:
                 detected_gesture = None
                 confidence = 0.0
                 
-                # Check for swipes first (motion gestures)
-                swipe_gesture, swipe_confidence = self._detect_swipe()
-                if swipe_gesture and swipe_confidence >= self.confidence_threshold:
-                    detected_gesture = swipe_gesture
-                    confidence = swipe_confidence
+                # Check if hand is open (required for swipe detection)
+                hand_is_open = self._is_hand_open(landmarks)
+                
+                # Check for swipes ONLY if hand is open
+                if hand_is_open:
+                    swipe_gesture, swipe_confidence = self._detect_swipe()
+                    if swipe_gesture and swipe_confidence >= self.confidence_threshold:
+                        detected_gesture = swipe_gesture
+                        confidence = swipe_confidence
+                else:
+                    # Hand is closed (fist) - clear position history so movements don't accumulate
+                    self.position_history.clear()
                 
                 # Check static gestures - simpler now with just 2 gestures
                 if not detected_gesture:

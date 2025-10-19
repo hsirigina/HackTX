@@ -1,13 +1,17 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './index.css'
-import App from './App.jsx'
+import AgentDashboard from './AgentDashboard.jsx'
 import McLarenDashboard from './McLarenDashboard.jsx'
 
-// Switch between dashboards by commenting/uncommenting:
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <McLarenDashboard />
-    {/* <App /> */}
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<AgentDashboard />} />
+        <Route path="/monitor" element={<McLarenDashboard />} />
+      </Routes>
+    </BrowserRouter>
   </StrictMode>,
 )

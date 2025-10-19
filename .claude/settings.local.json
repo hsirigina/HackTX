@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install react-router-dom)",
+      "Bash(npm run dev)",
+      "Bash(npm run build)",
+      "Bash(source venv/bin/activate)",
+      "Bash(pip install numpy scipy pandas matplotlib requests fastf1 supabase google-generativeai python-dotenv pyserial fastapi uvicorn websockets opencv-python)",
+      "Bash(python run_interactive_simulator.py)",
+      "Bash(python api_server.py)",
+      "Bash(cat main.jsx)",
+      "Bash(cat /Users/renjit_joseph/Documents/GitHub/HackTX/frontend/src/main.jsx)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
