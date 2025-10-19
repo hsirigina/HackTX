@@ -121,7 +121,7 @@ class RaceMonitorV2:
             lap_times_response = self.supabase.table('lap_times').select('*').eq(
                 'race_id', self.race_id
             ).eq(
-                'driver', self.driver_name
+                'driver_name', self.driver_name
             ).order('lap_number', desc=True).limit(10).execute()
 
             if not lap_times_response.data:
@@ -129,12 +129,13 @@ class RaceMonitorV2:
 
             latest_lap = lap_times_response.data[0]
             lap_number = latest_lap['lap_number']
+            driver_number = latest_lap['driver_number']
 
             # Get tire data
             tire_response = self.supabase.table('tire_data').select('*').eq(
                 'race_id', self.race_id
             ).eq(
-                'driver', self.driver_name
+                'driver_number', driver_number
             ).eq(
                 'lap_number', lap_number
             ).execute()
@@ -143,7 +144,7 @@ class RaceMonitorV2:
             position_response = self.supabase.table('race_positions').select('*').eq(
                 'race_id', self.race_id
             ).eq(
-                'driver', self.driver_name
+                'driver_number', driver_number
             ).eq(
                 'lap_number', lap_number
             ).execute()
@@ -249,6 +250,9 @@ class RaceMonitorV2:
         )
         all_events.extend(competitor_events)
 
+        # Save agent status to database (every lap)
+        self._save_agent_status(lap_number, lap_data)
+
         # ========================================
         # STEP 2: Check if we should call AI
         # ========================================
@@ -323,45 +327,58 @@ class RaceMonitorV2:
         return 999.0
 
     def _format_competitors(self, all_drivers: List[Dict]) -> List[Dict]:
-        """Format competitor data for agents"""
-        formatted = []
+        """Format competitor data for agents using batch queries"""
+        if not all_drivers:
+            return []
 
+        formatted = []
+        lap_number = all_drivers[0].get('lap_number') if all_drivers else None
+
+        if not lap_number:
+            return []
+
+        # BATCH QUERY 1: Get all tire data for this lap in one query
+        tire_response = self.supabase.table('tire_data').select('*').eq(
+            'race_id', self.race_id
+        ).eq(
+            'lap_number', lap_number
+        ).execute()
+
+        # Create lookup dict: driver_number -> tire data
+        tire_lookup = {t['driver_number']: t for t in tire_response.data} if tire_response.data else {}
+
+        # BATCH QUERY 2: Get all lap times for this lap in one query
+        lap_response = self.supabase.table('lap_times').select('*').eq(
+            'race_id', self.race_id
+        ).eq(
+            'lap_number', lap_number
+        ).execute()
+
+        # Create lookup dict: driver_number -> lap data
+        lap_lookup = {l['driver_number']: l for l in lap_response.data} if lap_response.data else {}
+
+        # Now format all drivers using the lookup dicts (no more queries!)
         for driver in all_drivers:
-            if driver.get('driver') == self.driver_name:
+            driver_num = driver.get('driver_number')
+            if not driver_num:
                 continue
 
-            # Get tire data for this driver
-            try:
-                tire_response = self.supabase.table('tire_data').select('*').eq(
-                    'race_id', self.race_id
-                ).eq(
-                    'driver', driver['driver']
-                ).eq(
-                    'lap_number', driver['lap_number']
-                ).execute()
+            # Get tire data from lookup
+            tire_data = tire_lookup.get(driver_num, {})
+            tire_age = tire_data.get('tire_age', 0)
+            compound = tire_data.get('compound', 'UNKNOWN')
 
-                tire_age = tire_response.data[0].get('tire_age', 0) if tire_response.data else 0
-                compound = tire_response.data[0].get('compound', 'UNKNOWN') if tire_response.data else 'UNKNOWN'
-            except:
-                tire_age = 0
-                compound = 'UNKNOWN'
+            # Get lap data from lookup
+            lap_data = lap_lookup.get(driver_num, {})
+            lap_time = lap_data.get('lap_time_seconds')
+            driver_name = lap_data.get('driver_name', f'#{driver_num}')
 
-            # Get lap time
-            try:
-                lap_response = self.supabase.table('lap_times').select('*').eq(
-                    'race_id', self.race_id
-                ).eq(
-                    'driver', driver['driver']
-                ).eq(
-                    'lap_number', driver['lap_number']
-                ).execute()
-
-                lap_time = lap_response.data[0].get('lap_time_seconds') if lap_response.data else None
-            except:
-                lap_time = None
+            # Skip our own driver
+            if driver_name == self.driver_name:
+                continue
 
             formatted.append({
-                'name': driver['driver'],
+                'name': driver_name,
                 'position': driver.get('position'),
                 'lap_time': lap_time,
                 'tire_age': tire_age,
@@ -407,14 +424,61 @@ class RaceMonitorV2:
         try:
             self.supabase.table('agent_recommendations').insert({
                 'race_id': self.race_id,
-                'driver': self.driver_name,
                 'lap_number': lap_number,
-                'agent_type': 'COORDINATOR',
-                'recommendation': recommendation,
-                'created_at': datetime.now().isoformat()
+                'agent_name': 'COORDINATOR',
+                'recommendation_type': recommendation.get('recommendation_type', 'UNKNOWN'),
+                'confidence_score': recommendation.get('confidence', 0),
+                'reasoning': recommendation.get('reasoning', '')
             }).execute()
         except Exception as e:
             print(f"⚠️  Error saving recommendation: {e}")
+
+    def _save_agent_status(self, lap_number: int, lap_data: Dict):
+        """Save agent status summaries to Supabase every lap"""
+        try:
+            # Get summaries from all agents
+            tire_status = self.tire_agent.get_status_summary()
+            pace_status = self.lap_time_agent.get_status_summary()
+            position_status = self.position_agent.get_status_summary()
+            competitor_status = self.competitor_agent.get_status_summary(lap_data.get('position', 1))
+
+            # Debug: Print what we're about to save
+            if lap_number % 5 == 0:  # Print every 5 laps to avoid spam
+                print(f"📊 Saving agent status - Tire: {tire_status.get('current_compound')}, Pace trend: {pace_status.get('pace_trend')}")
+
+            # Use upsert to prevent duplicates if backend runs multiple times
+            self.supabase.table('agent_status').upsert({
+                'race_id': self.race_id,
+                'lap_number': lap_number,
+                'driver_name': self.driver_name,
+
+                # Tire data
+                'tire_compound': tire_status.get('current_compound'),
+                'tire_age': tire_status.get('tire_age'),
+                'tire_degradation_trend': tire_status.get('degradation_trend_5_laps'),
+                'predicted_cliff_lap': tire_status.get('laps_until_cliff'),  # Laps remaining until cliff
+
+                # Pace data
+                'current_pace': pace_status.get('current_pace'),
+                'pace_trend': pace_status.get('pace_trend'),
+                'avg_lap_time': pace_status.get('avg_lap_time'),
+
+                # Position data
+                'current_position': lap_data.get('position'),
+                'gap_ahead': lap_data.get('gap_ahead'),
+                'gap_behind': self._get_gap_behind(lap_data),
+
+                # Competitor data
+                'nearby_threats': competitor_status.get('threats', []),
+                'nearby_opportunities': competitor_status.get('opportunities', [])
+            }, on_conflict='race_id,lap_number,driver_name').execute()
+        except Exception as e:
+            import traceback
+            print(f"\n❌ ERROR SAVING AGENT STATUS:")
+            print(f"   Lap: {lap_number}")
+            print(f"   Error: {e}")
+            print(f"   Traceback:")
+            traceback.print_exc()
 
     def _update_arduino(self, recommendation: Dict):
         """Update Arduino display with recommendation"""

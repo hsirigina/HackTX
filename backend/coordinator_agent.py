@@ -21,7 +21,9 @@ load_dotenv()
 
 # Configure Gemini
 GOOGLE_API_KEY = os.getenv('GOOGLE_API_KEY')
-if GOOGLE_API_KEY:
+DISABLE_AI = os.getenv('DISABLE_AI', 'false').lower() == 'true'
+
+if GOOGLE_API_KEY and not DISABLE_AI:
     genai.configure(api_key=GOOGLE_API_KEY)
 
 
@@ -112,6 +114,10 @@ class CoordinatorAgent:
                 "key_events": ["event1", "event2", ...]
             }
         """
+        # If AI is disabled, return mock recommendation
+        if DISABLE_AI:
+            return self._get_mock_recommendation(current_lap, events, lap_data)
+
         # Get status summaries from all data agents
         tire_status = self.tire_agent.get_status_summary()
         pace_status = self.lap_time_agent.get_status_summary()
@@ -290,6 +296,41 @@ Analyze this situation and provide a strategic recommendation in JSON format:
 """
 
         return context
+
+    def _get_mock_recommendation(self, current_lap: int, events: List[TriggerEvent], lap_data: Dict) -> Dict:
+        """Return a mock recommendation when AI is disabled"""
+        # Determine mock recommendation based on events
+        critical_events = [e for e in events if e.urgency == 'CRITICAL']
+        high_events = [e for e in events if e.urgency == 'HIGH']
+
+        if critical_events:
+            rec_type = 'PIT_SOON'
+            urgency = 'CRITICAL'
+            confidence = 0.85
+        elif high_events:
+            rec_type = 'STAY_OUT'
+            urgency = 'HIGH'
+            confidence = 0.75
+        else:
+            rec_type = 'STAY_OUT'
+            urgency = 'MEDIUM'
+            confidence = 0.65
+
+        tire_age = lap_data.get('tire_age', 0)
+        compound = lap_data.get('compound', 'UNKNOWN')
+
+        return {
+            "consensus": "CLEAR",
+            "recommendation_type": rec_type,
+            "pit_window": [current_lap + 3, current_lap + 5] if rec_type == 'PIT_SOON' else None,
+            "target_compound": "MEDIUM" if rec_type == 'PIT_SOON' else None,
+            "driver_instruction": f"[MOCK] Continue pushing, {tire_age} laps on {compound}. Data agents monitoring.",
+            "pit_crew_instruction": f"[MOCK] Standby for potential pit stop. Monitor tire degradation.",
+            "reasoning": f"[MOCK DATA] AI is disabled. This is mock recommendation based on {len(events)} detected events. Enable AI by removing DISABLE_AI from .env",
+            "urgency": urgency,
+            "confidence": confidence,
+            "key_events": [e.data.get('message', e.type) for e in events[:3]]
+        }
 
     def get_cached_recommendation(self) -> Optional[Dict]:
         """

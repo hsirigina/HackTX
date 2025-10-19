@@ -91,7 +91,7 @@ class RaceReplay:
         """Clear existing race data from Supabase for fresh replay."""
         print(f"\n🗑️  Clearing existing data for race_id: {self.race_id}...")
 
-        tables = ['lap_times', 'tire_data', 'pit_stops', 'race_positions', 'agent_recommendations']
+        tables = ['lap_times', 'tire_data', 'pit_stops', 'race_positions', 'agent_recommendations', 'agent_status']
 
         for table in tables:
             try:
@@ -168,13 +168,16 @@ class RaceReplay:
                 pos = lap['Position']
                 position = int(pos) if not (pos is None or (isinstance(pos, float) and math.isnan(pos))) else 99
 
-                self.supabase.table('race_positions').insert({
-                    'race_id': self.race_id,
-                    'lap_number': int(lap_number),
-                    'driver_number': driver_num,
-                    'position': position,
-                    'gap_to_leader_seconds': None  # Calculate if needed
-                }).execute()
+                try:
+                    self.supabase.table('race_positions').insert({
+                        'race_id': self.race_id,
+                        'lap_number': int(lap_number),
+                        'driver_number': driver_num,
+                        'position': position,
+                        'gap_to_leader_seconds': None  # Calculate if needed
+                    }).execute()
+                except Exception as pos_error:
+                    print(f"   ⚠️  POSITION INSERT FAILED - Lap {lap_number}, Driver {driver} (#{driver_num}), Position {position}: {pos_error}")
 
             except Exception as e:
                 print(f"   ⚠️  Error pushing lap {lap_number} for driver {driver}: {e}")
