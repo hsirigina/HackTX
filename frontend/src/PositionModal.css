@@ -1,5 +1,5 @@
-/* Laptime Modal Overlay */
-.laptime-modal-overlay {
+/* Position Modal Overlay */
+.position-modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -15,12 +15,12 @@
   transition: opacity 0.3s ease;
 }
 
-.laptime-modal-overlay.active {
+.position-modal-overlay.active {
   opacity: 1;
 }
 
-/* Laptime Modal Container */
-.laptime-modal-container {
+/* Position Modal Container */
+.position-modal-container {
   background: linear-gradient(135deg, rgba(25, 35, 55, 0.98), rgba(15, 20, 35, 0.98));
   border: 2px solid rgba(0, 191, 255, 0.4);
   border-radius: 0;
@@ -38,12 +38,12 @@
   font-family: 'Rajdhani', sans-serif;
 }
 
-.laptime-modal-container.active {
+.position-modal-container.active {
   transform: scale(1) translateY(0);
   opacity: 1;
 }
 
-.laptime-modal-container::before {
+.position-modal-container::before {
   content: '';
   position: absolute;
   top: -50%;
@@ -61,7 +61,7 @@
 }
 
 /* Header */
-.laptime-modal-header {
+.position-modal-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -72,7 +72,7 @@
   z-index: 1;
 }
 
-.laptime-modal-title {
+.position-modal-title {
   display: flex;
   align-items: center;
   gap: 15px;
@@ -84,12 +84,12 @@
   text-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
 }
 
-.laptime-icon {
+.position-icon {
   font-size: 36px;
   filter: drop-shadow(0 0 15px rgba(0, 191, 255, 0.6));
 }
 
-.laptime-close-btn {
+.position-close-btn {
   background: rgba(244, 67, 54, 0.2);
   border: 2px solid #f44336;
   color: #f44336;
@@ -105,14 +105,14 @@
   font-weight: 700;
 }
 
-.laptime-close-btn:hover {
+.position-close-btn:hover {
   background: rgba(244, 67, 54, 0.4);
   box-shadow: 0 0 20px rgba(244, 67, 54, 0.6);
   transform: rotate(90deg);
 }
 
 /* Content Grid */
-.laptime-modal-content {
+.position-modal-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
@@ -123,56 +123,60 @@
   z-index: 1;
 }
 
-.laptime-modal-content::-webkit-scrollbar {
+.position-modal-content::-webkit-scrollbar {
   width: 10px;
 }
 
-.laptime-modal-content::-webkit-scrollbar-track {
+.position-modal-content::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 4px;
 }
 
-.laptime-modal-content::-webkit-scrollbar-thumb {
+.position-modal-content::-webkit-scrollbar-thumb {
   background: rgba(0, 191, 255, 0.5);
   border-radius: 4px;
 }
 
-.laptime-modal-content::-webkit-scrollbar-thumb:hover {
+.position-modal-content::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 191, 255, 0.8);
 }
 
-/* Performance Section */
-.laptime-performance-section {
+/* Position Status Section */
+.position-status-section {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 12px;
   height: 100%;
   overflow: hidden;
 }
 
-.laptime-stats-header {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
+.position-stats-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   flex-shrink: 0;
 }
 
-.laptime-stat-item {
+.position-stat-item {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(0, 191, 255, 0.2);
   border-radius: 8px;
-  padding: 15px;
+  padding: 12px;
   text-align: center;
   transition: all 0.3s ease;
 }
 
-.laptime-stat-item:hover {
+.position-stat-item.large {
+  padding: 15px;
+}
+
+.position-stat-item:hover {
   border-color: rgba(0, 191, 255, 0.5);
   box-shadow: 0 0 20px rgba(0, 191, 255, 0.3);
   transform: translateY(-3px);
 }
 
-.laptime-stat-label {
+.position-stat-label {
   font-size: 10px;
   color: #667788;
   letter-spacing: 2px;
@@ -180,62 +184,31 @@
   margin-bottom: 10px;
 }
 
-.laptime-stat-value-large {
-  font-size: 28px;
+.position-stat-value-large {
+  font-size: 48px;
   font-weight: 900;
   color: #00bfff;
   font-family: 'Orbitron', sans-serif;
-  text-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
+  text-shadow: 0 0 30px rgba(0, 191, 255, 0.8);
 }
 
-.laptime-stat-unit {
-  font-size: 18px;
-  margin-left: 5px;
-}
-
-/* Track Info Grid */
-.track-info-grid {
+.position-stat-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 10px;
-  flex-shrink: 0;
 }
 
-.track-info-box {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 10px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-}
-
-.track-info-box:hover {
-  background: rgba(0, 191, 255, 0.1);
-  border-color: rgba(0, 191, 255, 0.3);
-  transform: translateX(5px);
-}
-
-.info-icon {
-  font-size: 24px;
-  filter: drop-shadow(0 0 10px rgba(0, 191, 255, 0.5));
-}
-
-.info-label {
-  font-size: 9px;
-  color: #667788;
-  letter-spacing: 1px;
-  font-weight: 600;
-  margin-bottom: 5px;
-}
-
-.info-value {
-  font-size: 16px;
-  color: #fff;
-  font-weight: 700;
+.position-stat-value {
+  font-size: 20px;
+  font-weight: 900;
+  color: #00bfff;
   font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
+}
+
+.position-stat-value.positive {
+  color: #4caf50;
+  text-shadow: 0 0 15px rgba(76, 175, 80, 0.6);
 }
 
 /* Section Titles */
@@ -251,8 +224,8 @@
   text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
 }
 
-/* Sector Breakdown */
-.sector-breakdown-section {
+/* Live Positions */
+.live-positions-section {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -263,180 +236,246 @@
   min-height: 0;
 }
 
-.sector-bars {
+.race-positions-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.position-row {
+  display: grid;
+  grid-template-columns: 35px 25px 1fr 70px 35px;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+}
+
+.position-row:hover {
+  background: rgba(0, 191, 255, 0.05);
+  border-color: rgba(0, 191, 255, 0.2);
+}
+
+.position-row.leader {
+  border-color: rgba(255, 215, 0, 0.3);
+  background: rgba(255, 215, 0, 0.05);
+}
+
+.position-row.your-position {
+  border-color: rgba(0, 191, 255, 0.5);
+  background: rgba(0, 191, 255, 0.1);
+  box-shadow: 0 0 15px rgba(0, 191, 255, 0.2);
+}
+
+.pos-number {
+  font-size: 16px;
+  font-weight: 900;
+  color: #00bfff;
+  font-family: 'Orbitron', sans-serif;
+  text-align: center;
+}
+
+.pos-arrow {
+  text-align: center;
+  min-width: 20px;
+}
+
+.arrow-up {
+  color: #4caf50;
+  font-size: 14px;
+}
+
+.arrow-down {
+  color: #f44336;
+  font-size: 14px;
+}
+
+.pos-driver-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.pos-gap {
+  font-size: 14px;
+  color: #667788;
+  font-weight: 600;
+  text-align: right;
+}
+
+.pos-tire-compound {
+  font-size: 12px;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+/* Position History */
+.position-history-section {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  flex-shrink: 0;
+}
+
+.history-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.history-lap {
+  font-size: 12px;
+  color: #667788;
+  font-weight: 600;
+}
+
+.history-pos {
+  font-size: 18px;
+  font-weight: 900;
+  color: #00bfff;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.history-pos.highlight {
+  color: #ffd700;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
+}
+
+.history-change {
+  font-size: 12px;
+  color: #667788;
+  font-weight: 600;
+}
+
+/* Analysis Section */
+.position-analysis-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* Battles */
+.battles-section {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.battles-grid {
   display: flex;
   flex-direction: column;
   gap: 12px;
   flex: 1;
 }
 
-.sector-item {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.sector-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.sector-name {
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: 2px;
-  color: #00bfff;
-  font-family: 'Orbitron', sans-serif;
-}
-
-.sector-time {
-  font-size: 18px;
-  font-weight: 900;
-  color: #fff;
-  font-family: 'Orbitron', sans-serif;
-  text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
-}
-
-.sector-bar-track {
-  width: 100%;
-  height: 12px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
-  overflow: hidden;
-}
-
-.sector-bar-fill {
-  height: 100%;
-  border-radius: 6px;
-  box-shadow: 0 0 15px rgba(0, 191, 255, 0.5);
-  transition: width 0.8s ease;
-}
-
-/* Average Lap Info */
-.avg-lap-info {
-  background: rgba(0, 0, 0, 0.4);
-  border: 2px solid rgba(0, 191, 255, 0.3);
-  border-radius: 8px;
-  padding: 15px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.avg-label {
-  font-size: 10px;
-  color: #667788;
-  letter-spacing: 2px;
-  font-weight: 600;
-  margin-bottom: 10px;
-}
-
-.avg-time {
-  font-size: 36px;
-  font-weight: 900;
-  color: #00bfff;
-  font-family: 'Orbitron', sans-serif;
-  text-shadow: 0 0 30px rgba(0, 191, 255, 0.8);
-  margin-bottom: 8px;
-}
-
-.avg-trend {
-  font-size: 12px;
-  color: #4caf50;
-  font-weight: 700;
-  letter-spacing: 2px;
-}
-
-/* Analysis Section */
-.laptime-analysis-section {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  height: 100%;
-  overflow: hidden;
-}
-
-/* Key Corners */
-.corners-section {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 15px;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-
-.corners-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
-  flex: 1;
-}
-
-.corner-box {
+.battle-card {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 10px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
+  padding: 15px;
   transition: all 0.3s ease;
 }
 
-.corner-box:hover {
+.battle-card:hover {
   border-color: rgba(0, 191, 255, 0.3);
   box-shadow: 0 0 15px rgba(0, 191, 255, 0.2);
-  transform: translateY(-2px);
 }
 
-.corner-number {
-  font-size: 24px;
+.battle-header {
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #00bfff;
+  margin-bottom: 15px;
+  text-align: center;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.battle-drivers {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.battle-driver {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+}
+
+.battle-driver.ahead {
+  border-color: rgba(255, 215, 0, 0.2);
+}
+
+.battle-driver.behind {
+  border-color: rgba(0, 191, 255, 0.2);
+}
+
+.battle-pos {
+  font-size: 20px;
   font-weight: 900;
   color: #00bfff;
   font-family: 'Orbitron', sans-serif;
-  text-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
-  min-width: 45px;
-  text-align: center;
 }
 
-.corner-details {
-  flex: 1;
-}
-
-.corner-name {
-  font-size: 14px;
+.battle-name {
+  font-size: 16px;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 8px;
 }
 
-.corner-speeds {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.speed-item {
-  display: flex;
-  justify-content: space-between;
+.battle-team {
   font-size: 11px;
-}
-
-.speed-label {
   color: #667788;
   font-weight: 600;
 }
 
-.speed-value {
-  color: #00bfff;
-  font-weight: 700;
+.battle-gap {
+  font-size: 18px;
+  font-weight: 900;
+  color: #ffd700;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
 }
 
-/* Pace Comparison */
-.pace-comparison-section {
+/* Opportunities */
+.opportunities-section {
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
@@ -447,58 +486,55 @@
   min-height: 0;
 }
 
-.pace-bars {
+.opportunities-grid {
   display: flex;
   flex-direction: column;
   gap: 10px;
   flex: 1;
 }
 
-.pace-item {
+.opportunity-card {
   display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.pace-driver-name {
-  font-size: 16px;
-  font-weight: 900;
-  color: #fff;
-  font-family: 'Orbitron', sans-serif;
-  min-width: 60px;
-  text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
-}
-
-.pace-bar-track {
-  flex: 1;
-  height: 32px;
-  background: rgba(0, 0, 0, 0.5);
-  border-radius: 6px;
-  overflow: hidden;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.pace-bar-fill {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  padding-right: 15px;
   border-radius: 6px;
-  box-shadow: 0 0 15px rgba(0, 191, 255, 0.4);
-  transition: width 0.8s ease;
+  transition: all 0.3s ease;
 }
 
-.pace-time-value {
+.opportunity-card:hover {
+  border-color: rgba(0, 191, 255, 0.3);
+  background: rgba(0, 191, 255, 0.05);
+  transform: translateX(5px);
+}
+
+.opp-icon {
+  font-size: 28px;
+  filter: drop-shadow(0 0 10px rgba(0, 191, 255, 0.5));
+}
+
+.opp-content {
+  flex: 1;
+}
+
+.opp-title {
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: #00bfff;
+  margin-bottom: 5px;
   font-family: 'Orbitron', sans-serif;
-  text-shadow: 0 0 10px rgba(0, 0, 0, 0.8);
 }
 
-/* Circuit Name */
-.circuit-name-section {
+.opp-desc {
+  font-size: 12px;
+  color: #667788;
+  line-height: 1.4;
+}
+
+/* Race Info */
+.race-info-section {
   background: rgba(0, 0, 0, 0.4);
   border: 2px solid rgba(0, 191, 255, 0.3);
   border-radius: 8px;
@@ -507,7 +543,7 @@
   flex-shrink: 0;
 }
 
-.circuit-label {
+.race-info-label {
   font-size: 18px;
   font-weight: 900;
   color: #00bfff;
@@ -517,7 +553,16 @@
   margin-bottom: 8px;
 }
 
-.circuit-location {
+.race-info-lap {
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffd700;
+  font-family: 'Orbitron', sans-serif;
+  text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
+  margin-bottom: 8px;
+}
+
+.race-info-location {
   font-size: 12px;
   color: #667788;
   letter-spacing: 2px;
@@ -526,34 +571,31 @@
 
 /* Responsive */
 @media (max-width: 1200px) {
-  .laptime-modal-content {
-    grid-template-columns: 1fr;
-  }
-
-  .corners-grid {
+  .position-modal-content {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 768px) {
-  .laptime-modal-container {
+  .position-modal-container {
     width: 95%;
     max-height: 95vh;
   }
 
-  .laptime-stats-header {
+  .position-stat-grid {
     grid-template-columns: 1fr;
   }
 
-  .track-info-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .laptime-modal-header {
+  .position-modal-header {
     padding: 20px;
   }
 
-  .laptime-modal-content {
+  .position-modal-content {
     padding: 20px;
+  }
+
+  .position-row {
+    grid-template-columns: 30px 20px 1fr 60px 30px;
+    font-size: 14px;
   }
 }

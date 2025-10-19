@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
 import TireModal from './TireModal'
 import LaptimeModal from './LaptimeModal'
+import PositionModal from './PositionModal'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'race-session-' + Date.now()
@@ -31,7 +32,7 @@ function AgentDashboard() {
   const [finalResults, setFinalResults] = useState(null)
   const [isTireModalOpen, setIsTireModalOpen] = useState(false)
   const [isLaptimeModalOpen, setIsLaptimeModalOpen] = useState(false)
-  const [showPositionPopup, setShowPositionPopup] = useState(false)
+  const [isPositionModalOpen, setIsPositionModalOpen] = useState(false)
 
   // Start race and fetch backend data
   useEffect(() => {
@@ -590,7 +591,7 @@ function AgentDashboard() {
         {/* Right Column - Position & Competitor Agents */}
         <div className="agents-column">
           {/* Position Agent */}
-          <div className="agent-card" onClick={() => setShowPositionPopup(true)} style={{ cursor: 'pointer' }}>
+          <div className="agent-card" onClick={() => setIsPositionModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
               <div className="agent-icon">🏁</div>
               <div className="agent-name">POSITION AGENT</div>
@@ -696,221 +697,17 @@ function AgentDashboard() {
         }}
       />
 
-      {/* Position Agent Popup */}
-      {showPositionPopup && (
-        <div className="agent-popup-overlay" onClick={() => setShowPositionPopup(false)}>
-          <div className="agent-popup" onClick={(e) => e.stopPropagation()}>
-            <div className="popup-header">
-              <div className="popup-title">
-                <div className="agent-icon">🏁</div>
-                <div>
-                  <div className="popup-main-title">POSITION AGENT</div>
-                  <div className="popup-subtitle">Lap {currentLap} / 57 • Bahrain Grand Prix</div>
-                </div>
-              </div>
-              <button className="popup-close" onClick={() => setShowPositionPopup(false)}>✕</button>
-            </div>
-
-            <div className="popup-content">
-              {/* Current Position Status */}
-              <div className="popup-section">
-                <div className="section-label">📊 YOUR POSITION</div>
-                <div className="position-status-grid">
-                  <div className="position-card large">
-                    <span className="position-card-label">Current Position</span>
-                    <span className="position-card-value">P{raceState.position}</span>
-                  </div>
-                  <div className="position-card">
-                    <span className="position-card-label">Gap Ahead</span>
-                    <span className="position-card-value">{insights.position.gap_ahead}</span>
-                  </div>
-                  <div className="position-card">
-                    <span className="position-card-label">Gap Behind</span>
-                    <span className="position-card-value">{insights.position.gap_behind}</span>
-                  </div>
-                  <div className="position-card">
-                    <span className="position-card-label">Positions Gained</span>
-                    <span className="position-card-value positive">+0</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Race Positions */}
-              <div className="popup-section">
-                <div className="section-label">🏎️ LIVE RACE POSITIONS - LAP {currentLap}</div>
-                <div className="race-positions">
-                  {/* Driver Position Row */}
-                  <div className="position-row leader">
-                    <div className="pos-num">1</div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">VER</div>
-                    <div className="pos-gap">LEADER</div>
-                    <div className="pos-tire">M</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">2</div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">LEC</div>
-                    <div className="pos-gap">+2.345</div>
-                    <div className="pos-tire">M</div>
-                  </div>
-
-                  <div className={`position-row ${raceState.position === 3 ? 'your-position' : ''}`}>
-                    <div className="pos-num">3</div>
-                    <div className="pos-arrow">
-                      {raceState.position === 3 ? <span className="you-marker">👉 YOU</span> : ''}
-                    </div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">{raceState.position === 3 ? 'YOU' : 'NOR'}</div>
-                    <div className="pos-gap">+4.567</div>
-                    <div className="pos-tire">{raceState.tireCompound.charAt(0)}</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">4</div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">PIA</div>
-                    <div className="pos-gap">+6.123</div>
-                    <div className="pos-tire">M</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">5</div>
-                    <div className="pos-arrow"><span className="arrow-up">▲</span></div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">RUS</div>
-                    <div className="pos-gap">+8.901</div>
-                    <div className="pos-tire">M</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">6</div>
-                    <div className="pos-arrow"><span className="arrow-down">▼</span></div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">HAM</div>
-                    <div className="pos-gap">+10.234</div>
-                    <div className="pos-tire">M</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">7</div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">ALO</div>
-                    <div className="pos-gap">+12.567</div>
-                    <div className="pos-tire">H</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">8</div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">STR</div>
-                    <div className="pos-gap">+15.890</div>
-                    <div className="pos-tire">H</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">9</div>
-                    <div className="pos-arrow"><span className="arrow-up">▲</span></div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">SAI</div>
-                    <div className="pos-gap">+18.123</div>
-                    <div className="pos-tire">M</div>
-                  </div>
-
-                  <div className="position-row">
-                    <div className="pos-num">10</div>
-                    <div className="pos-arrow"><span className="arrow-down">▼</span></div>
-                    <div className="pos-team-logo">🏎️</div>
-                    <div className="pos-driver">BOT</div>
-                    <div className="pos-gap">+20.456</div>
-                    <div className="pos-tire">H</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Battle Tracker */}
-              <div className="popup-section">
-                <div className="section-label">⚔️ ACTIVE BATTLES</div>
-                <div className="battle-tracker">
-                  <div className="battle-card">
-                    <div className="battle-header">BATTLE FOR P{raceState.position === 3 ? '3' : '5'}rd</div>
-                    <div className="battle-drivers">
-                      <div className="battle-driver-card ahead">
-                        <div className="battle-pos">{raceState.position - 1}</div>
-                        <div className="battle-logo">🏎️</div>
-                        <div className="battle-name">LEC</div>
-                      </div>
-                      <div className="battle-gap">+0.189</div>
-                      <div className="battle-driver-card behind">
-                        <div className="battle-pos">{raceState.position}</div>
-                        <div className="battle-logo">🏎️</div>
-                        <div className="battle-name">YOU</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="battle-card">
-                    <div className="battle-header">BATTLE FOR P9th</div>
-                    <div className="battle-drivers">
-                      <div className="battle-driver-card ahead">
-                        <div className="battle-pos">9</div>
-                        <div className="battle-logo">🏎️</div>
-                        <div className="battle-name">SAI</div>
-                      </div>
-                      <div className="battle-gap">+0.324</div>
-                      <div className="battle-driver-card behind">
-                        <div className="battle-pos">10</div>
-                        <div className="battle-logo">🏎️</div>
-                        <div className="battle-name">BOT</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Position History */}
-              <div className="popup-section">
-                <div className="section-label">📈 POSITION HISTORY</div>
-                <div className="position-history">
-                  <div className="history-item">
-                    <span className="history-lap">Lap 1</span>
-                    <span className="history-pos">P3</span>
-                    <span className="history-change">START</span>
-                  </div>
-                  <div className="history-item">
-                    <span className="history-lap">Lap {Math.max(5, Math.floor(currentLap / 2))}</span>
-                    <span className="history-pos">P{raceState.position}</span>
-                    <span className="history-change">---</span>
-                  </div>
-                  <div className="history-item">
-                    <span className="history-lap">Lap {currentLap}</span>
-                    <span className="history-pos highlight">P{raceState.position}</span>
-                    <span className="history-change">CURRENT</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Strategic Opportunities */}
-              <div className="popup-section">
-                <div className="section-label">💡 STRATEGIC OPPORTUNITIES</div>
-                <div className="opportunities-grid">
-                  <div className="opportunity-card">
-                    <div className="opp-icon">🎯</div>
-                    <div className="opp-title">Undercut Available</div>
-                    <div className="opp-desc">P{raceState.position - 1} on old tires - pit now to gain track position</div>
-                  </div>
-                  <div className="opportunity-card">
-                    <div className="opp-icon">🔄</div>
-                    <div className="opp-title">DRS Opportunity</div>
-                    <div className="opp-desc">Within 1s of car ahead - DRS will activate next lap</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Position Modal */}
+      <PositionModal
+        isOpen={isPositionModalOpen}
+        onClose={() => setIsPositionModalOpen(false)}
+        positionData={{
+          position: insights?.position?.position,
+          gap_ahead: insights?.position?.gap_ahead,
+          gap_behind: insights?.position?.gap_behind
+        }}
+        currentLap={currentLap}
+      />
     </div>
   )
 }
