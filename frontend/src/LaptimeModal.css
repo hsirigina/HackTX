@@ -369,24 +369,28 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 .corners-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 10px;
+  gap: 8px;
   flex: 1;
+  overflow-y: auto;
+  padding-right: 5px;
 }
 
 .corner-box {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 10px;
+  border-radius: 6px;
+  padding: 8px;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   transition: all 0.3s ease;
+  height: fit-content;
 }
 
 .corner-box:hover {
@@ -396,46 +400,54 @@
 }
 
 .corner-number {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 900;
   color: #00bfff;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 15px rgba(0, 191, 255, 0.6);
-  min-width: 45px;
+  min-width: 38px;
   text-align: center;
+  flex-shrink: 0;
 }
 
 .corner-details {
   flex: 1;
+  min-width: 0;
 }
 
 .corner-name {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   color: #fff;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .corner-speeds {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
 }
 
 .speed-item {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: 10px;
+  gap: 5px;
 }
 
 .speed-label {
   color: #667788;
   font-weight: 600;
+  flex-shrink: 0;
 }
 
 .speed-value {
   color: #00bfff;
   font-weight: 700;
+  text-align: right;
 }
 
 /* Pace Comparison */

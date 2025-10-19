@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { createClient } from '@supabase/supabase-js'
 import './McLarenDashboard.css'
 
@@ -10,8 +10,9 @@ const supabase = createClient(
 
 function McLarenDashboard() {
   const location = useLocation()
+  const navigate = useNavigate()
   const raceConfig = location.state || {}
-  
+
   const [userData, setUserData] = useState(null)
   const [competitorData, setCompetitorData] = useState(null)
   const [weatherData, setWeatherData] = useState(null)
@@ -70,20 +71,20 @@ function McLarenDashboard() {
     'imola': 'AUTODROMO ENZO E DINO FERRARI'
   }
 
-  // Generate realistic mock data for non-Bahrain races
+  // Generate dynamic mock data that changes realistically
   const generateMockData = (raceId, driver, lap) => {
-    // Driver characteristics (base speed, consistency, aggression)
+    // Driver characteristics (base speed, team strength, consistency, aggression)
     const driverStats = {
-      'VER': { speed: 330, consistency: 0.95, aggression: 0.9 },
-      'PER': { speed: 325, consistency: 0.88, aggression: 0.75 },
-      'LEC': { speed: 328, consistency: 0.90, aggression: 0.85 },
-      'SAI': { speed: 326, consistency: 0.87, aggression: 0.80 },
-      'HAM': { speed: 327, consistency: 0.92, aggression: 0.88 },
-      'RUS': { speed: 324, consistency: 0.89, aggression: 0.82 },
-      'NOR': { speed: 326, consistency: 0.91, aggression: 0.87 },
-      'PIA': { speed: 323, consistency: 0.86, aggression: 0.79 },
-      'ALO': { speed: 325, consistency: 0.93, aggression: 0.83 },
-      'STR': { speed: 322, consistency: 0.85, aggression: 0.78 }
+      'VER': { speed: 330, teamStrength: 0.98, consistency: 0.95, aggression: 0.9 },
+      'PER': { speed: 325, teamStrength: 0.95, consistency: 0.88, aggression: 0.75 },
+      'LEC': { speed: 328, teamStrength: 0.92, consistency: 0.90, aggression: 0.85 },
+      'SAI': { speed: 326, teamStrength: 0.90, consistency: 0.87, aggression: 0.80 },
+      'HAM': { speed: 327, teamStrength: 0.88, consistency: 0.92, aggression: 0.88 },
+      'RUS': { speed: 324, teamStrength: 0.86, consistency: 0.89, aggression: 0.82 },
+      'NOR': { speed: 326, teamStrength: 0.87, consistency: 0.91, aggression: 0.87 },
+      'PIA': { speed: 323, teamStrength: 0.85, consistency: 0.86, aggression: 0.79 },
+      'ALO': { speed: 325, teamStrength: 0.80, consistency: 0.93, aggression: 0.83 },
+      'STR': { speed: 322, teamStrength: 0.78, consistency: 0.85, aggression: 0.78 }
     }
 
     // Track speed multipliers
@@ -94,22 +95,38 @@ function McLarenDashboard() {
       'monaco': 0.82, 'singapore': 0.85, 'hungary': 0.87
     }
 
-    const stats = driverStats[driver] || driverStats['NOR']
+    const stats = driverStats[driver] || { speed: 322, teamStrength: 0.75, consistency: 0.85, aggression: 0.75 }
     const trackMult = trackMultipliers[raceId] || 1.0
     
-    // Add some lap-to-lap variation
-    const lapVariation = Math.sin(lap * 0.3) * 0.02 + Math.random() * 0.03
+    // Create dynamic position based on multiple factors
+    const seed = driver.charCodeAt(0) + lap * 17
+    const random = (Math.sin(seed) + 1) / 2
+    const lapVariation = Math.sin(lap * 0.3) * 0.02 + random * 0.03
+    
+    // Calculate dynamic position (1-20) based on:
+    // - Team strength (base performance)
+    // - Lap progression (tire deg, strategy)
+    // - Driver consistency (how much they vary)
+    const lapFactor = Math.sin(lap * 0.15) * (1 - stats.consistency) * 3
+    const strategyFactor = (lap > 15 && lap < 45) ? Math.cos(lap * 0.1) * 2 : 0 // pit window effects
+    const baseRank = (1 - stats.teamStrength) * 15 // 0-15 range based on team
+    const position = Math.max(1, Math.min(20, Math.round(baseRank + lapFactor + strategyFactor + random * 3)))
+    
+    // Driver number based on position with some variation
+    const driverNumber = position + Math.floor(random * 5)
     
     return {
       speed_max: stats.speed * trackMult * (1 + lapVariation),
       speed_avg: stats.speed * trackMult * 0.75 * (1 + lapVariation * 0.5),
-      throttle_avg: 65 + stats.aggression * 30 + Math.random() * 5,
-      throttle_max: 98 + Math.random() * 2,
-      brake_avg: (1 - stats.aggression) * 15 + Math.random() * 5,
-      brake_max: 95 + Math.random() * 5,
-      drs_available: Math.random() > 0.6,
-      position_x: 50 + lap * 2 + Math.random() * 10,
-      position_y: 30 + Math.sin(lap) * 5 + Math.random() * 10
+      throttle_avg: 65 + stats.aggression * 30 + random * 5,
+      throttle_max: 98 + random * 2,
+      brake_avg: (1 - stats.aggression) * 15 + random * 5,
+      brake_max: 95 + random * 5,
+      drs_available: random > 0.6,
+      position_x: 50 + lap * 2 + random * 10,
+      position_y: 30 + Math.sin(lap + seed) * 5 + random * 10,
+      position: position,
+      driver_number: driverNumber
     }
   }
 
@@ -162,10 +179,7 @@ function McLarenDashboard() {
             .single()
 
           if (!userError && userTelem) setUserData(userTelem)
-          else {
-            // Fallback to mock if no data
-            setUserData(generateMockData(raceId, 'YOU', currentLap))
-          }
+          // Don't generate mock data for user - position comes from raceState
 
           // Fetch competitor telemetry
           const { data: compTelem, error: compError } = await supabase
@@ -196,14 +210,13 @@ function McLarenDashboard() {
 
         } catch (err) {
           console.error('Error fetching race data:', err)
-          // Use mock data as fallback
-          setUserData(generateMockData(raceId, 'YOU', currentLap))
+          // Use mock data as fallback (but not for user position - that's from raceState)
           setCompetitorData(generateMockData(raceId, competitorDriver, currentLap))
           setWeatherData(generateMockWeather(raceId, currentLap))
         }
       } else {
         // Generate realistic mock data for non-Bahrain races
-        setUserData(generateMockData(raceId, 'YOU', currentLap))
+        // User position comes from raceState, only generate opponent data
         setCompetitorData(generateMockData(raceId, competitorDriver, currentLap))
         setWeatherData(generateMockWeather(raceId, currentLap))
       }
@@ -218,11 +231,38 @@ function McLarenDashboard() {
 
   return (
     <div className="mclaren-dashboard">
-      {/* Top Header */}
-      <div className="top-header">
-        <div className="header-left">VODAFONE McLAREN MERCEDES</div>
-        <div className="header-right">VODAFONE McLAREN MERCEDES</div>
-      </div>
+      {/* Back Button */}
+      <button 
+        onClick={() => navigate('/livesim', { replace: true })}
+        style={{
+          position: 'absolute',
+          top: '20px',
+          right: '20px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '50%',
+          backgroundColor: 'rgba(0, 191, 255, 0.2)',
+          border: '2px solid #00bfff',
+          color: '#00bfff',
+          fontSize: '24px',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          transition: 'all 0.3s ease'
+        }}
+        onMouseEnter={(e) => {
+          e.target.style.backgroundColor = 'rgba(0, 191, 255, 0.4)'
+          e.target.style.transform = 'scale(1.1)'
+        }}
+        onMouseLeave={(e) => {
+          e.target.style.backgroundColor = 'rgba(0, 191, 255, 0.2)'
+          e.target.style.transform = 'scale(1)'
+        }}
+      >
+        ✕
+      </button>
 
       {/* Main Container */}
       <div className="main-container">
@@ -236,10 +276,10 @@ function McLarenDashboard() {
           <div className="driver-name-section">
             <div className="driver-name-left">
               <h2>YOU</h2>
-              <div className="driver-badge blue">{raceConfig.raceState?.position || 3}</div>
+              <div className="driver-badge blue">{raceConfig.raceState?.position || 10}</div>
               <div className="driver-delta blue">-1.075</div>
             </div>
-            <div className="position-huge">{raceConfig.raceState?.position || 2}</div>
+            <div className="position-huge">{raceConfig.raceState?.position || 10}</div>
           </div>
 
           <div className="driver-stats">
@@ -320,88 +360,20 @@ function McLarenDashboard() {
             <div className="location">{trackName}</div>
           </div>
 
-          <div className="lap-weather-row">
-            <div className="lap-counter">
-              <div className="lap-label">LAP</div>
-              <div className="lap-number">{raceConfig.currentLap || 30}/{raceConfig.selectedRace?.laps || 53}</div>
-            </div>
-
-            <div className="weather-box">
-              <div className="weather-condition">{weatherData?.rainfall ? 'Rainy' : 'Cloudy'}</div>
-              <div className="temperature">{weatherData?.air_temp?.toFixed(0) || '25'}°<span>C</span></div>
+          <div className="weather-box" style={{margin: '20px auto', maxWidth: '300px'}}>
+            <div className="weather-condition">{weatherData?.rainfall ? 'Rainy' : 'Cloudy'}</div>
+            <div className="temperature">{weatherData?.air_temp?.toFixed(0) || '25'}°<span>C</span></div>
               <div className="wind-info">
                 <span className="wind-label">WIND</span>
-                <span className="wind-value">{weatherData?.wind_speed?.toFixed(1) || '3.5'}m/s ↓</span>
+              <span className="wind-value">{weatherData?.wind_speed?.toFixed(1) || '3.5'}m/s ↓</span>
               </div>
               <div className="track-temp-info">
                 <span className="temp-label">TRACK TEMP</span>
-                <span className="temp-value">{weatherData?.track_temp?.toFixed(0) || '45'}°C</span>
-              </div>
+              <span className="temp-value">{weatherData?.track_temp?.toFixed(0) || '45'}°C</span>
             </div>
           </div>
 
-          <div className="track-map">
-            {trackSvgPath ? (
-              <img src={trackSvgPath} alt={trackName} style={{width: '100%', height: '100%', objectFit: 'contain'}} />
-            ) : (
-              <svg viewBox="0 0 800 400" className="track-svg">
-                {/* Fallback track outline */}
-                <path 
-                  d="M 250,100 
-                     L 550,100 
-                     Q 650,100 650,200
-                     L 650,280
-                     Q 650,350 550,350
-                     L 250,350
-                     Q 150,350 150,280
-                     L 150,200
-                     Q 150,100 250,100 Z" 
-                  fill="none" 
-                  stroke="#3a4555" 
-                  strokeWidth="60"
-                />
-                <path 
-                  d="M 250,100 
-                     L 550,100 
-                     Q 650,100 650,200
-                     L 650,280
-                     Q 650,350 550,350
-                     L 250,350
-                     Q 150,350 150,280
-                     L 150,200
-                     Q 150,100 250,100 Z" 
-                  fill="none" 
-                  stroke="#2a5580" 
-                  strokeWidth="30"
-                />
-                
-                {/* Sector markers */}
-                <text x="280" y="70" fill="#667788" fontSize="14">06</text>
-                <text x="370" y="70" fill="#667788" fontSize="14">07</text>
-                <text x="500" y="70" fill="#667788" fontSize="14">08</text>
-                <text x="680" y="130" fill="#667788" fontSize="14">09</text>
-                <text x="680" y="240" fill="#667788" fontSize="14">10</text>
-                <text x="680" y="320" fill="#667788" fontSize="14">11</text>
-                <text x="500" y="390" fill="#667788" fontSize="14">01</text>
-                <text x="370" y="390" fill="#667788" fontSize="14">02</text>
-                <text x="240" y="390" fill="#667788" fontSize="14">03</text>
-                <text x="100" y="320" fill="#667788" fontSize="14">04</text>
-                <text x="100" y="180" fill="#667788" fontSize="14">05</text>
-
-                {/* Car position markers */}
-                <circle cx="400" cy="340" r="10" fill="#00bfff" className="car-marker">
-                  <animate attributeName="cx" values="400;420;400" dur="2s" repeatCount="indefinite"/>
-                </circle>
-                <circle cx="450" cy="340" r="10" fill="#ffd700" className="car-marker">
-                  <animate attributeName="cx" values="450;470;450" dur="2s" repeatCount="indefinite"/>
-                </circle>
-              </svg>
-            )}
-
-            <div className="drs-zone-badge">DRS ZONE</div>
-          </div>
-
-          <div className="telemetry-chart">
+          <div className="telemetry-chart" style={{marginTop: '30px'}}>
             <svg viewBox="0 0 1000 150" className="chart-svg">
               {/* Speed traces */}
               <path 
@@ -419,6 +391,112 @@ function McLarenDashboard() {
               {/* Grid */}
               <line x1="0" y1="75" x2="1000" y2="75" stroke="#2a3544" strokeWidth="1"/>
             </svg>
+        </div>
+
+          {/* Blue Section - YOU */}
+          <div className="section-grid" style={{marginTop: '30px'}}>
+            <div className="tire-section">
+              <div className="section-title">TYRES AND LAPS PACED</div>
+              <div className="tire-content">
+                <div className="pirelli-logo">Pirelli</div>
+                <div className="tire-circle blue">
+                  <div className="tire-laps">{raceConfig.raceState?.tireAge || 8}</div>
+                  <div className="tire-label">LAPS</div>
+                </div>
+                <div className="tire-gauges">
+                  <div className="tire-gauge">
+                    <div className="gauge-label">L.Rear</div>
+                    <div className="gauge-ring"></div>
+                  </div>
+                  <div className="tire-gauge">
+                    <div className="gauge-label">R.Rear</div>
+                    <div className="gauge-ring"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="pit-window-section blue-theme">
+              <div className="window-title blue">NEXT PIT WINDOW LAPS</div>
+              <div className="window-laps blue-bg">36 - 39</div>
+              <div className="window-stats">
+                <div className="stat-group">
+                  <div className="stat-name blue">PIT STOP TIMES</div>
+                  <div className="stat-val blue">3:024 sec</div>
+                </div>
+                <div className="stat-group">
+                  <div className="stat-name">OUTLAP</div>
+                  <div className="stat-val">21</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="raw-telemetry">
+              <div className="section-title">RAW TELEMETRY DATA</div>
+              <div className="telemetry-table">
+                <div className="telem-row">
+                  <span className="telem-label">vCar</span>
+                  <span className="telem-blue">{userData?.speed_avg?.toFixed(1) || '259.3'}</span>
+                  <span className="telem-yellow">{competitorData?.speed_avg?.toFixed(1) || '258.4'}</span>
+                  <span className="telem-unit">kph</span>
+                </div>
+                <div className="telem-row">
+                  <span className="telem-label">Motor</span>
+                  <span className="telem-blue">6</span>
+                  <span className="telem-yellow">N</span>
+                </div>
+                <div className="telem-row">
+                  <span className="telem-label">Throttle</span>
+                  <span className="telem-blue">{userData?.throttle_avg?.toFixed(1) || '100.0'}</span>
+                  <span className="telem-yellow">{competitorData?.throttle_avg?.toFixed(1) || '98.5'}</span>
+                  <span className="telem-unit">%</span>
+                </div>
+                <div className="telem-row">
+                  <span className="telem-label">Brake</span>
+                  <span className="telem-blue">{userData?.brake_avg?.toFixed(1) || '8.5'}</span>
+                  <span className="telem-yellow">{competitorData?.brake_avg?.toFixed(1) || '7.2'}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+          {/* Yellow Section - COMPETITOR */}
+          <div className="section-grid reverse" style={{marginTop: '20px'}}>
+            <div className="pit-window-section yellow-theme">
+              <div className="window-title yellow">NEXT PIT WINDOW LAPS</div>
+              <div className="window-laps yellow-bg">35 - 38</div>
+              <div className="window-stats">
+                <div className="stat-group">
+                  <div className="stat-name">OUTLAP</div>
+                  <div className="stat-val">19</div>
+                </div>
+                <div className="stat-group">
+                  <div className="stat-name yellow">PIT STOP TIMES</div>
+                  <div className="stat-val yellow">3:174 sec</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="tire-section">
+              <div className="section-title">TIRE PRESSURE AND LIFE</div>
+              <div className="tire-content reverse">
+                <div className="tire-gauges">
+                  <div className="tire-gauge">
+                    <div className="gauge-label">L.Rear</div>
+                    <div className="gauge-ring"></div>
+                  </div>
+                  <div className="tire-gauge">
+                    <div className="gauge-label">R.Rear</div>
+                    <div className="gauge-ring"></div>
+                  </div>
+                </div>
+                <div className="tire-circle yellow">
+                  <div className="tire-laps">11</div>
+                  <div className="tire-label">LAPS</div>
+                </div>
+                <div className="pirelli-logo">Pirelli</div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -430,10 +508,10 @@ function McLarenDashboard() {
           </div>
 
           <div className="driver-name-section reverse">
-            <div className="position-huge">1</div>
+            <div className="position-huge">{competitorData?.position || 1}</div>
             <div className="driver-name-right">
               <h2>{raceConfig.selectedDriver || 'COMPETITOR'}</h2>
-              <div className="driver-badge yellow">1</div>
+              <div className="driver-badge yellow">{competitorData?.position || 1}</div>
               <div className="driver-delta yellow">+1.075</div>
             </div>
           </div>
@@ -511,136 +589,6 @@ function McLarenDashboard() {
         </div>
       </div>
 
-      {/* Bottom Section */}
-      <div className="bottom-section">
-        {/* Left Bottom */}
-        <div className="bottom-left">
-          <div className="section-grid">
-            <div className="tire-section">
-              <div className="section-title">TYRES AND LAPS PACED</div>
-              <div className="tire-content">
-                <div className="pirelli-logo">Pirelli</div>
-                <div className="tire-circle blue">
-                  <div className="tire-laps">{raceConfig.raceState?.tireAge || 8}</div>
-                  <div className="tire-label">LAPS</div>
-                </div>
-                <div className="tire-gauges">
-                  <div className="tire-gauge">
-                    <div className="gauge-label">L.Rear</div>
-                    <div className="gauge-ring"></div>
-                  </div>
-                  <div className="tire-gauge">
-                    <div className="gauge-label">R.Rear</div>
-                    <div className="gauge-ring"></div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pit-window-section blue-theme">
-              <div className="window-title blue">NEXT PIT WINDOW LAPS</div>
-              <div className="window-laps blue-bg">36 - 39</div>
-              <div className="window-stats">
-                <div className="stat-group">
-                  <div className="stat-name blue">PIT STOP TIMES</div>
-                  <div className="stat-val blue">3:024 sec</div>
-                </div>
-                <div className="stat-group">
-                  <div className="stat-name">OUTLAP</div>
-                  <div className="stat-val">21</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="raw-telemetry">
-              <div className="section-title">RAW TELEMETRY DATA</div>
-              <div className="telemetry-table">
-                <div className="telem-row">
-                  <span className="telem-label">vCar</span>
-                  <span className="telem-blue">{userData?.speed_avg?.toFixed(1) || '259.3'}</span>
-                  <span className="telem-yellow">{competitorData?.speed_avg?.toFixed(1) || '258.4'}</span>
-                  <span className="telem-unit">kph</span>
-                </div>
-                <div className="telem-row">
-                  <span className="telem-label">Motor</span>
-                  <span className="telem-blue">6</span>
-                  <span className="telem-yellow">N</span>
-                </div>
-                <div className="telem-row">
-                  <span className="telem-label">Throttle</span>
-                  <span className="telem-blue">{userData?.throttle_avg?.toFixed(1) || '100.0'}</span>
-                  <span className="telem-yellow">{competitorData?.throttle_avg?.toFixed(1) || '98.5'}</span>
-                  <span className="telem-unit">%</span>
-                </div>
-                <div className="telem-row">
-                  <span className="telem-label">Brake</span>
-                  <span className="telem-blue">{userData?.brake_avg?.toFixed(1) || '8.5'}</span>
-                  <span className="telem-yellow">{competitorData?.brake_avg?.toFixed(1) || '7.2'}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Center Bottom */}
-        <div className="bottom-center">
-          <div className="data-rate-box">
-            <div className="rate-title">DATA RATE</div>
-            <div className="rate-bars">
-              <div className="rate-bar"></div>
-              <div className="rate-bar"></div>
-              <div className="rate-bar"></div>
-              <div className="rate-bar"></div>
-              <div className="rate-bar active"></div>
-            </div>
-            <div className="rate-info">
-              <div className="rate-status">Transferring</div>
-              <div className="rate-speed">+3.3 MB/sec</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Right Bottom */}
-        <div className="bottom-right">
-          <div className="section-grid reverse">
-            <div className="pit-window-section yellow-theme">
-              <div className="window-title yellow">NEXT PIT WINDOW LAPS</div>
-              <div className="window-laps yellow-bg">35 - 38</div>
-              <div className="window-stats">
-                <div className="stat-group">
-                  <div className="stat-name">OUTLAP</div>
-                  <div className="stat-val">19</div>
-                </div>
-                <div className="stat-group">
-                  <div className="stat-name yellow">PIT STOP TIMES</div>
-                  <div className="stat-val yellow">3:174 sec</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="tire-section">
-              <div className="section-title">TIRE PRESSURE AND LIFE</div>
-              <div className="tire-content reverse">
-                <div className="tire-gauges">
-                  <div className="tire-gauge">
-                    <div className="gauge-label">L.Rear</div>
-                    <div className="gauge-ring"></div>
-                  </div>
-                  <div className="tire-gauge">
-                    <div className="gauge-label">R.Rear</div>
-                    <div className="gauge-ring"></div>
-                  </div>
-                </div>
-                <div className="tire-circle yellow">
-                  <div className="tire-laps">11</div>
-                  <div className="tire-label">LAPS</div>
-                </div>
-                <div className="pirelli-logo">Pirelli</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Timeline */}
       <div className="timeline-section">
@@ -689,17 +637,6 @@ function McLarenDashboard() {
               <div className="marker-label yellow">PLANNED PIT 1</div>
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="footer">
-        <div className="footer-left">
-          <div className="sap-badge">SAP</div>
-          <div className="powered-by">Powered by HANA</div>
-        </div>
-        <div className="footer-right">
-          <div className="race-status">RACE STATUS</div>
         </div>
       </div>
     </div>

@@ -126,29 +126,37 @@
 .position-modal-content {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  padding: 20px;
+  gap: 15px;
+  padding: 15px;
   height: calc(90vh - 80px);
   overflow: hidden;
   position: relative;
   z-index: 1;
 }
 
-.position-modal-content::-webkit-scrollbar {
-  width: 10px;
+.position-modal-content::-webkit-scrollbar,
+.race-positions-grid::-webkit-scrollbar,
+.position-analysis-section::-webkit-scrollbar {
+  width: 6px;
 }
 
-.position-modal-content::-webkit-scrollbar-track {
+.position-modal-content::-webkit-scrollbar-track,
+.race-positions-grid::-webkit-scrollbar-track,
+.position-analysis-section::-webkit-scrollbar-track {
   background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.position-modal-content::-webkit-scrollbar-thumb {
+.position-modal-content::-webkit-scrollbar-thumb,
+.race-positions-grid::-webkit-scrollbar-thumb,
+.position-analysis-section::-webkit-scrollbar-thumb {
   background: rgba(0, 191, 255, 0.5);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-.position-modal-content::-webkit-scrollbar-thumb:hover {
+.position-modal-content::-webkit-scrollbar-thumb:hover,
+.race-positions-grid::-webkit-scrollbar-thumb:hover,
+.position-analysis-section::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 191, 255, 0.8);
 }
 
@@ -156,7 +164,7 @@
 .position-status-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   height: 100%;
   overflow: hidden;
 }
@@ -164,7 +172,7 @@
 .position-stats-header {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   flex-shrink: 0;
 }
 
@@ -224,12 +232,12 @@
 
 /* Section Titles */
 .section-title {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 900;
-  letter-spacing: 3px;
+  letter-spacing: 2px;
   color: #00bfff;
-  margin-bottom: 20px;
-  padding-bottom: 10px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
   border-bottom: 1px solid rgba(0, 191, 255, 0.2);
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
@@ -240,7 +248,7 @@
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 15px;
+  padding: 12px;
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -252,7 +260,9 @@
   flex-direction: column;
   gap: 4px;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 5px;
 }
 
 .position-row {
@@ -336,21 +346,21 @@
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 15px;
+  padding: 12px;
   flex-shrink: 0;
 }
 
 .history-grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .history-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 10px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 4px;
@@ -386,7 +396,9 @@
   flex-direction: column;
   gap: 12px;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 5px;
 }
 
 /* Battles */
@@ -394,8 +406,8 @@
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  padding: 15px;
-  flex: 1;
+  padding: 12px;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -404,15 +416,14 @@
 .battles-grid {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  flex: 1;
+  gap: 10px;
 }
 
 .battle-card {
   background: rgba(0, 0, 0, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 15px;
+  border-radius: 6px;
+  padding: 12px;
   transition: all 0.3s ease;
 }
 
@@ -422,11 +433,11 @@
 }
 
 .battle-header {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 900;
   letter-spacing: 2px;
   color: #00bfff;
-  margin-bottom: 15px;
+  margin-bottom: 12px;
   text-align: center;
   font-family: 'Orbitron', sans-serif;
 }
@@ -435,7 +446,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 15px;
+  gap: 12px;
 }
 
 .battle-driver {
@@ -443,8 +454,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
-  padding: 12px;
+  gap: 5px;
+  padding: 10px;
   background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
@@ -459,26 +470,26 @@
 }
 
 .battle-pos {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 900;
   color: #00bfff;
   font-family: 'Orbitron', sans-serif;
 }
 
 .battle-name {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: #fff;
 }
 
 .battle-team {
-  font-size: 11px;
+  font-size: 10px;
   color: #667788;
   font-weight: 600;
 }
 
 .battle-gap {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   color: #ffd700;
   font-family: 'Orbitron', sans-serif;
@@ -549,28 +560,28 @@
   background: rgba(0, 0, 0, 0.4);
   border: 2px solid rgba(0, 191, 255, 0.3);
   border-radius: 8px;
-  padding: 15px;
+  padding: 12px;
   text-align: center;
   flex-shrink: 0;
 }
 
 .race-info-label {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 900;
   color: #00bfff;
   letter-spacing: 3px;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .race-info-lap {
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 900;
   color: #ffd700;
   font-family: 'Orbitron', sans-serif;
   text-shadow: 0 0 20px rgba(255, 215, 0, 0.6);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
 }
 
 .race-info-location {

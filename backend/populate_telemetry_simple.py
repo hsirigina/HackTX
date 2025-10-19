@@ -44,8 +44,8 @@ for lap_num in range(1, 58):
                 'wind_direction': int(weather['WindDirection']) if weather['WindDirection'] else 180,
                 'rainfall': bool(weather['Rainfall']) if weather['Rainfall'] is not None else False
             }).execute()
-        except:
-            pass
+        except Exception as e:
+            print(f"\n   ⚠️  Weather error lap {lap_num}: {e}")
     
     # Driver telemetry
     for driver in drivers:
@@ -100,7 +100,7 @@ for lap_num in range(1, 58):
             }).execute()
             
         except Exception as e:
-            pass  # Skip errors for individual drivers
+            print(f"\n   ⚠️  Error lap {lap_num} driver {driver}: {e}")
 
 print("\n\n✅ Done! Populated telemetry for 57 laps of Bahrain 2024")
 print("   - driver_telemetry: ~570 rows (10 drivers × 57 laps)")
