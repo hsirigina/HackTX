@@ -664,230 +664,114 @@ function AgentDashboard() {
           {/* Swipable Scenario Carousel OR Final Results OR Race Selection */}
           {!raceStarted && showSelection ? (
             /* Race Selection Screen */
-            <div style={{ 
-              padding: '20px', 
-              pointerEvents: 'auto',
-              userSelect: 'auto',
-              WebkitUserSelect: 'auto',
-              position: 'relative',
-              zIndex: 10
-            }}>
-              <div style={{
-                textAlign: 'center',
-                marginBottom: '30px'
-              }}>
-                <div style={{ fontSize: '32px', fontWeight: 'bold', color: '#fff', marginBottom: '8px' }}>
-                  🏎️ Race Configuration
+            <div className="race-config-container">
+              <div className="race-config-wrapper">
+                <div className="race-config-header">
+                  <div className="race-config-title">Race Configuration</div>
+                  <div className="race-config-subtitle">Select your race parameters</div>
                 </div>
-                <div style={{ fontSize: '16px', color: '#889aab' }}>
-                  Select your race parameters
-                </div>
-              </div>
 
-              {loadingRaces || initialLoading ? (
-                <div style={{ textAlign: 'center', color: '#889aab', padding: '40px' }}>
-                  Loading races...
-                </div>
-              ) : (
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(2, 1fr)',
-                  gap: '20px',
-                  marginBottom: '30px'
-                }}>
-                  {/* Race Selection */}
-                  <div style={{
-                    backgroundColor: '#1a2332',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '2px solid #2d3748'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
-                      🏁 RACE
+                {loadingRaces || initialLoading ? (
+                  <div className="race-config-loader">Loading races...</div>
+                ) : (
+                  <div className="race-config-grid">
+                    {/* Race Selection */}
+                    <div className="race-config-card">
+                      <div className="race-config-label">Race</div>
+                      <select
+                        value={selectedRace?.id || ''}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedRace(availableRaces.find(r => r.id === e.target.value));
+                        }}
+                        className="race-config-select"
+                      >
+                        {availableRaces.map(race => (
+                          <option key={race.id} value={race.id}>
+                            {race.name} ({race.laps} laps)
+                          </option>
+                        ))}
+                      </select>
+                      {selectedRace && (
+                        <div className="race-config-note">Location: {selectedRace.country}</div>
+                      )}
                     </div>
-                    <select
-                      value={selectedRace?.id || ''}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedRace(availableRaces.find(r => r.id === e.target.value));
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        fontSize: '16px',
-                        backgroundColor: '#0d1117',
-                        color: '#fff',
-                        border: '1px solid #2d3748',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        pointerEvents: 'auto',
-                        userSelect: 'auto',
-                        WebkitAppearance: 'menulist',
-                        appearance: 'auto'
-                      }}
-                    >
-                      {availableRaces.map(race => (
-                        <option key={race.id} value={race.id}>
-                          {race.name} ({race.laps} laps)
-                        </option>
-                      ))}
-                    </select>
-                    {selectedRace && (
-                      <div style={{ marginTop: '8px', fontSize: '12px', color: '#667788' }}>
-                        📍 {selectedRace.country}
+
+                    {/* Starting Position */}
+                    <div className="race-config-card">
+                      <div className="race-config-label">Starting Position</div>
+                      <select
+                        value={selectedPosition}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedPosition(parseInt(e.target.value));
+                        }}
+                        className="race-config-select"
+                      >
+                        {Array.from({ length: 20 }, (_, i) => i + 1).map(pos => (
+                          <option key={pos} value={pos}>P{pos}</option>
+                        ))}
+                      </select>
+                      <div className="race-config-note">Grid position at race start</div>
+                    </div>
+
+                    {/* Tire Compound */}
+                    <div className="race-config-card">
+                      <div className="race-config-label">Starting Tire</div>
+                      <div className="race-config-tires">
+                        {['SOFT', 'MEDIUM', 'HARD'].map(compound => (
+                          <button
+                            key={compound}
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTire(compound);
+                            }}
+                            className={`race-config-tire-btn ${selectedTire === compound ? 'active' : ''}`}
+                            aria-pressed={selectedTire === compound}
+                          >
+                            <span className="race-config-tire-name">{compound}</span>
+                            <span className="race-config-tire-desc">
+                              {compound === 'SOFT' ? 'Fast / Fragile' : compound === 'MEDIUM' ? 'Balanced' : 'Durable / Consistent'}
+                            </span>
+                          </button>
+                        ))}
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Starting Position */}
-                  <div style={{
-                    backgroundColor: '#1a2332',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '2px solid #2d3748'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
-                      🎯 STARTING POSITION
-                    </div>
-                    <select
-                      value={selectedPosition}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedPosition(parseInt(e.target.value));
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        fontSize: '16px',
-                        backgroundColor: '#0d1117',
-                        color: '#fff',
-                        border: '1px solid #2d3748',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        pointerEvents: 'auto',
-                        userSelect: 'auto',
-                        WebkitAppearance: 'menulist',
-                        appearance: 'auto'
-                      }}
-                    >
-                      {Array.from({length: 20}, (_, i) => i + 1).map(pos => (
-                        <option key={pos} value={pos}>P{pos}</option>
-                      ))}
-                    </select>
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#667788' }}>
-                      Grid position at race start
+                    {/* Comparison Driver */}
+                    <div className="race-config-card">
+                      <div className="race-config-label">Compare With</div>
+                      <select
+                        value={selectedDriver}
+                        onChange={(e) => {
+                          e.stopPropagation();
+                          setSelectedDriver(e.target.value);
+                        }}
+                        className="race-config-select"
+                      >
+                        {['VER', 'PER', 'LEC', 'SAI', 'HAM', 'RUS', 'NOR', 'PIA', 'ALO', 'STR'].map(driver => (
+                          <option key={driver} value={driver}>{driver}</option>
+                        ))}
+                      </select>
+                      <div className="race-config-note">Benchmark driver for lap times</div>
                     </div>
                   </div>
+                )}
 
-                  {/* Tire Compound */}
-                  <div style={{
-                    backgroundColor: '#1a2332',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '2px solid #2d3748'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
-                      🛞 STARTING TIRE
-                    </div>
-                    <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                      {['SOFT', 'MEDIUM', 'HARD'].map(compound => (
-                        <button
-                          key={compound}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedTire(compound);
-                          }}
-                          style={{
-                            padding: '12px',
-                            fontSize: '14px',
-                            fontWeight: 'bold',
-                            backgroundColor: selectedTire === compound ? '#ff1e00' : '#0d1117',
-                            color: '#fff',
-                            border: selectedTire === compound ? '2px solid #ff1e00' : '1px solid #2d3748',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            pointerEvents: 'auto',
-                            userSelect: 'none'
-                          }}
-                        >
-                          <span>{compound === 'SOFT' ? '🔴' : compound === 'MEDIUM' ? '🟡' : '⚪'} {compound}</span>
-                          <span style={{ fontSize: '11px', color: '#889aab' }}>
-                            {compound === 'SOFT' ? 'Fast/Fragile' : compound === 'MEDIUM' ? 'Balanced' : 'Durable/Slow'}
-                          </span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Comparison Driver */}
-                  <div style={{
-                    backgroundColor: '#1a2332',
-                    padding: '20px',
-                    borderRadius: '8px',
-                    border: '2px solid #2d3748'
-                  }}>
-                    <div style={{ fontSize: '14px', fontWeight: 'bold', color: '#889aab', marginBottom: '12px' }}>
-                      👤 COMPARE WITH
-                    </div>
-                    <select
-                      value={selectedDriver}
-                      onChange={(e) => {
-                        e.stopPropagation();
-                        setSelectedDriver(e.target.value);
-                      }}
-                      style={{
-                        width: '100%',
-                        padding: '12px',
-                        fontSize: '16px',
-                        backgroundColor: '#0d1117',
-                        color: '#fff',
-                        border: '1px solid #2d3748',
-                        borderRadius: '4px',
-                        cursor: 'pointer',
-                        pointerEvents: 'auto',
-                        userSelect: 'auto',
-                        WebkitAppearance: 'menulist',
-                        appearance: 'auto'
-                      }}
-                    >
-                      {['VER', 'PER', 'LEC', 'SAI', 'HAM', 'RUS', 'NOR', 'PIA', 'ALO', 'STR'].map(driver => (
-                        <option key={driver} value={driver}>{driver}</option>
-                      ))}
-                    </select>
-                    <div style={{ marginTop: '8px', fontSize: '12px', color: '#667788' }}>
-                      Benchmark driver for lap times
-                    </div>
-                  </div>
+                <div className="race-config-actions">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      startRace();
+                    }}
+                    disabled={loadingRaces || !selectedRace}
+                    className="race-config-start"
+                  >
+                    Start Race
+                  </button>
                 </div>
-              )}
-
-              <div style={{ textAlign: 'center' }}>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    startRace();
-                  }}
-                  disabled={loadingRaces || !selectedRace}
-                  style={{
-                    padding: '16px 48px',
-                    fontSize: '18px',
-                    fontWeight: 'bold',
-                    backgroundColor: (loadingRaces || !selectedRace) ? '#667788' : '#ff1e00',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: (loadingRaces || !selectedRace) ? 'not-allowed' : 'pointer',
-                    transition: 'all 0.2s',
-                    pointerEvents: 'auto',
-                    userSelect: 'none'
-                  }}
-                >
-                  🏁 Start Race
-                </button>
               </div>
             </div>
           ) : raceFinished ? (
