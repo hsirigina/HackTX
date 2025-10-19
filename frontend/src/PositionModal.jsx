@@ -72,7 +72,7 @@ function PositionModal({ isOpen, onClose, positionData, currentLap }) {
         {/* Header */}
         <div className="position-modal-header">
           <div className="position-modal-title">
-            <span className="position-icon">🏁</span>
+            <span className="position-icon"><img src="/flagAgent.png" alt="Position Agent" /></span>
             POSITION ANALYSIS
           </div>
           <button className="position-close-btn" onClick={handleClose}>✕</button>

@@ -10,6 +10,7 @@ from tire_model import TireDegradationModel
 from driving_style import DrivingStyle, DrivingStyleManager
 from data_agents import CompetitorAgent
 import fastf1
+import pandas as pd
 
 
 @dataclass
@@ -120,6 +121,60 @@ class InteractiveRaceSimulator:
         # Competitor tracking (we'll track our own simulated driver "USER")
         self.competitor_agent = CompetitorAgent(driver_name="USER")
 
+    def _calculate_position_based_pace(self, starting_position: int) -> float:
+        """
+        Calculate player's base pace based on drivers around starting position.
+        Takes average of 2 drivers ahead + 2 behind (or fewer at grid extremes).
+
+        Args:
+            starting_position: Starting grid position (1-20)
+
+        Returns:
+            Average lap time in seconds
+        """
+        # Get final race results to map finishing position to driver
+        results = self.session.results
+
+        # Determine range of positions to sample (±2 positions)
+        min_pos = max(1, starting_position - 2)
+        max_pos = min(20, starting_position + 2)
+
+        # Collect lap times from drivers in this range
+        pace_samples = []
+        drivers_used = []
+
+        for pos in range(min_pos, max_pos + 1):
+            # Find driver who finished in this position
+            driver_result = results[results['Position'] == pos]
+            if len(driver_result) > 0:
+                driver_code = driver_result.iloc[0]['Abbreviation']
+                try:
+                    driver_laps = self.session.laps.pick_driver(driver_code)
+                    avg_lap = driver_laps['LapTime'].dt.total_seconds().mean()
+                    if not pd.isna(avg_lap):
+                        pace_samples.append(avg_lap)
+                        drivers_used.append(driver_code)
+                except:
+                    continue
+
+        # Calculate average pace - NO advantage buffer
+        # Starting from P20 should be challenging
+        PACE_PENALTY = 0.5  # 0.5s/lap SLOWER when starting from back
+
+        if len(pace_samples) > 0:
+            avg_pace = sum(pace_samples) / len(pace_samples)
+            # Add penalty for starting from back of grid
+            player_pace = avg_pace + PACE_PENALTY if starting_position >= 15 else avg_pace
+            print(f"   ✅ Your car pace based on P{min_pos}-P{max_pos} finishers: {avg_pace:.2f}s")
+            print(f"      Sampled drivers: {', '.join(drivers_used)}")
+            penalty_msg = f" (+{PACE_PENALTY}s penalty for P{starting_position} start)" if starting_position >= 15 else ""
+            print(f"      Your base pace: {player_pace:.2f}s{penalty_msg}")
+            return player_pace
+        else:
+            # Fallback to comparison driver if sampling fails
+            print(f"   ⚠️  Could not sample nearby drivers, using {self.comparison_driver} as fallback")
+            return self.comparison_avg_laptime - PACE_BUFFER
+
     def start_race(self, starting_position: int = 3, starting_compound: str = 'SOFT') -> Dict:
         """
         Start the race simulation
@@ -142,11 +197,16 @@ class InteractiveRaceSimulator:
             decisions_made=[]
         )
 
-        # Initialize tire model with current driving style
-        # Use VER's actual average lap time as baseline for realism
+        # Store starting position for position calculations
+        self.starting_position = starting_position
+
+        # Calculate base pace from drivers around starting position
+        # Take 2 ahead + 2 behind (or fewer if at front/back of grid)
+        player_base_laptime = self._calculate_position_based_pace(starting_position)
+
         self.tire_model = TireDegradationModel(
             total_laps=self.total_laps,
-            base_laptime=self.comparison_avg_laptime,
+            base_laptime=player_base_laptime,
             driving_style_multiplier=self.style_manager.get_tire_wear_multiplier()
         )
 
@@ -154,7 +214,8 @@ class InteractiveRaceSimulator:
         print(f"   Grid Position: P{starting_position}")
         print(f"   Starting Tires: {starting_compound}")
         print(f"   Total Laps: {self.total_laps}")
-        print(f"   Target: Beat {self.comparison_driver}'s time of {self.comparison_total_time:.1f}s\n")
+        print(f"   Target: Beat {self.comparison_driver}'s time of {self.comparison_total_time:.1f}s")
+        print(f"   Your base pace: {player_base_laptime:.2f}s (vs {self.comparison_driver}: {self.comparison_avg_laptime:.2f}s)\n")
 
         return {
             'race_name': self.race_name,

@@ -148,6 +148,14 @@ class PitWindowSelector:
 
         # Choose optimal lap as MIDDLE of green zone (not first green lap!)
         # This is the sweet spot: 77-78% tire wear
+        # BUT: Never pit in final laps (need meaningful stint to benefit from fresh tires)
+        race_end_lap = current_lap + laps_remaining
+        min_pit_lap = race_end_lap - 7  # Don't pit within 7 laps of race end
+
+        # Filter out laps that are too late in the race
+        recommended = [lap for lap in recommended if lap.lap_number < min_pit_lap]
+        acceptable = [lap for lap in acceptable if lap.lap_number < min_pit_lap]
+
         if recommended:
             # Pick the middle lap of the green zone
             optimal_lap = recommended[len(recommended) // 2].lap_number
@@ -156,10 +164,18 @@ class PitWindowSelector:
             # If no green zone, pick last acceptable lap (closest to 70%)
             optimal_lap = acceptable[-1].lap_number
             optimal_compound = acceptable[-1].best_compound
+        elif laps_remaining <= 3:
+            # Too close to race end - don't pit at all
+            optimal_lap = None
+            optimal_compound = current_compound
         else:
-            # Fallback to best_lap
-            optimal_lap = best_lap
-            optimal_compound = next(lap.best_compound for lap in lap_details if lap.lap_number == best_lap)
+            # Fallback to best_lap (if it's not too late)
+            if best_lap <= min_pit_lap:
+                optimal_lap = best_lap
+                optimal_compound = next(lap.best_compound for lap in lap_details if lap.lap_number == best_lap)
+            else:
+                optimal_lap = None
+                optimal_compound = current_compound
 
         # Calculate "never pit" scenario
         never_pit_impact = self._calculate_never_pit_impact(

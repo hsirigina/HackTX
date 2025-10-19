@@ -38,8 +38,10 @@ class RaceSessionState:
         self.last_tactical_lap = 0
         self.last_pit_decision_lap = 0
         self.pit_count = 0
-        self.TACTICAL_COOLDOWN = 10
+        self.TACTICAL_COOLDOWN = 8  # Reduced for more frequent tactical prompts
         self.PIT_DECISION_COOLDOWN = 5
+        self.tactical_mode_expires_lap = None  # When to auto-revert to MAINTAIN
+        self.TACTICAL_DURATION = 3  # Tactical modes last 3 laps
 
 
 class RaceStartRequest(BaseModel):
@@ -266,6 +268,7 @@ def start_race(request: RaceStartRequest):
             "success": True,
             "raceInfo": race_info,
             "currentLap": 1,
+            "totalLaps": simulator.total_laps,  # Return actual total laps from FastF1 data
             "state": get_race_state_from_session(session_state),
             "strategies": [{
                 "id": opt['id'],
@@ -355,15 +358,24 @@ def make_decision(request: DecisionRequest):
 
     elif session.pending_decision_type == 'TACTICAL':
         # Apply tactical decision (PUSH, MAINTAIN, CONSERVE)
+        # IMPORTANT: PUSH/CONSERVE are TEMPORARY (3 laps), then auto-revert to MAINTAIN
         tactical_map = {
-            1: {'pace': -0.2, 'wear': 0.2},
-            2: {'pace': 0.0, 'wear': 0.0},
-            3: {'pace': 0.2, 'wear': -0.2}
+            1: {'pace': -0.15, 'wear': 1.2, 'temporary': True},   # PUSH: 3 lap burst
+            2: {'pace': 0.0, 'wear': 1.0, 'temporary': False},    # MAINTAIN: permanent
+            3: {'pace': 0.15, 'wear': 0.8, 'temporary': True}     # CONSERVE: 3 lap burst
         }
         if request.option_id in tactical_map:
             params = tactical_map[request.option_id]
-            session.pace_modifier += params['pace']
-            session.wear_multiplier += params['wear']
+            session.pace_modifier = params['pace']
+            session.wear_multiplier = params['wear']
+
+            # Set expiry for temporary modes (PUSH/CONSERVE)
+            current_lap = sim.state.current_lap
+            if params['temporary']:
+                session.tactical_mode_expires_lap = current_lap + session.TACTICAL_DURATION
+                print(f"⏱️  Tactical mode active for {session.TACTICAL_DURATION} laps (expires lap {session.tactical_mode_expires_lap})")
+            else:
+                session.tactical_mode_expires_lap = None  # MAINTAIN has no expiry
 
     elif session.pending_decision_type == 'PIT':
         # User selected pit option - extract lap and compound from option params
@@ -386,7 +398,18 @@ def make_decision(request: DecisionRequest):
     from pit_window_selector import PitWindowSelector
     selector = PitWindowSelector(sim.tire_model, session.total_laps)
 
+    # Check if we've been lapped (leader finishes before we complete 57 laps)
+    leader_time = 5504.7  # VER's winning time
+
     for lap in range(sim.state.current_lap, session.total_laps + 1):
+        # Check if leader has finished while we're still racing
+        if sim.state.total_race_time > leader_time and lap < session.total_laps:
+            laps_behind = session.total_laps - lap
+            print(f"🏁 CHECKERED FLAG! Leader finished - you're {laps_behind} lap(s) down")
+            print(f"   You completed {lap} laps (lapped by leader)")
+            session.was_lapped = True
+            session.laps_completed = lap
+            break
         # Pit if planned
         if session.pit_plan and session.pit_plan[0] == lap:
             sim.state.tire_compound = session.pit_plan[1]
@@ -411,43 +434,107 @@ def make_decision(request: DecisionRequest):
         # Apply tactical pace modifier
         sim.state.total_race_time += session.pace_modifier
 
+        # Store position from lap 56 and maintain it through the finish
+        if lap == 56:
+            session.locked_position = position  # Use the calculated position, not sim.state.position
+            print(f"🔒 Locking position at P{session.locked_position} for final laps")
+
+        # Tactical modes are now permanent - no auto-revert
+
         max_laps = sim.tire_model.COMPOUND_WEAR_RATES[sim.state.tire_compound]['max_laps']
         tire_pct = sim.state.tire_age / max_laps
 
         # Calculate live position
-        position, gap_ahead, gap_behind, leader_gap = calculate_live_position(sim, lap)
+        sim._session = session  # Store session reference for position calculation
+        position, gap_ahead, gap_behind, leader_gap = calculate_live_position(sim, lap, session)
         sim.state.position = position
 
-        # Check for TACTICAL decision
-        tactical_opportunity = (
-            abs(gap_ahead) < 3.0 or
-            gap_behind < 2.0 or
-            (position <= 3 and abs(leader_gap) < 10.0)
-        )
+        # === STRATEGY ENGINE: Gap-aware intelligent recommendations ===
+        laps_remaining = session.total_laps - lap
+        strategic_decision_needed = False
+        context = ""
+        recommended = 1  # Default to MAINTAIN
 
-        if tactical_opportunity and (lap - session.last_tactical_lap) >= session.TACTICAL_COOLDOWN:
+        # Only offer tactical decisions when cooldown has passed
+        if (lap - session.last_tactical_lap) < session.TACTICAL_COOLDOWN:
+            pass  # Skip tactical decision, cooldown active
+        else:
+            # Analyze race situation and recommend strategy
+            # KEY: Check tire sustainability first - can we afford to PUSH?
+
+            # Calculate if we can reach end/pit window with current tire strategy
+            laps_until_pit = float('inf') if session.pit_plan is None else (session.pit_plan[0] - lap)
+            laps_to_cover = min(laps_until_pit, laps_remaining)
+            tire_can_sustain_push = (tire_pct < 0.5) or (laps_to_cover <= 5)  # Fresh tires or sprint distance
+
+            # PRIORITY 1: Tire sustainability check
+            # If tires are worn (>60%) and we have >10 laps to cover, recommend CONSERVE
+            if tire_pct > 0.60 and laps_to_cover > 10 and not tire_can_sustain_push:
+                strategic_decision_needed = True
+                context = f"Tire management: {int(tire_pct*100)}% wear, {int(laps_to_cover)} laps to cover"
+                recommended = 2  # CONSERVE - must preserve tires
+
+            # PRIORITY 2: Close racing battle (within 5s) - only if tires can handle it
+            elif abs(gap_ahead) < 5.0 and gap_ahead > 0:
+                strategic_decision_needed = True
+                context = f"Attacking: {gap_ahead:.1f}s gap to P{position-1}"
+                if tire_can_sustain_push:
+                    recommended = 0  # PUSH to close gap
+                else:
+                    recommended = 1  # MAINTAIN - can't afford tire wear
+
+            elif gap_behind > 0 and gap_behind < 5.0:
+                strategic_decision_needed = True
+                context = f"Defending: P{position+1} is {gap_behind:.1f}s behind"
+                if tire_can_sustain_push:
+                    recommended = 0  # PUSH to defend
+                else:
+                    recommended = 1  # MAINTAIN - defend without destroying tires
+
+            # PRIORITY 3: Tire crisis (>75% wear, far from pit)
+            elif tire_pct > 0.75 and laps_remaining > 15 and session.pit_plan is None:
+                strategic_decision_needed = True
+                context = f"Tire crisis: {int(tire_pct*100)}% wear, {laps_remaining} laps left"
+                recommended = 2  # CONSERVE to make it to pit window
+
+            # PRIORITY 4: Optimal tire window approaching (65-75%)
+            elif 0.65 <= tire_pct <= 0.75 and session.pit_plan is None and laps_remaining > 12:
+                strategic_decision_needed = True
+                context = f"Pit window: {int(tire_pct*100)}% wear - pit soon or extend?"
+                recommended = 2  # CONSERVE to extend, or MAINTAIN to pit soon
+
+            # PRIORITY 5: Fresh tires out of pit (first 5 laps on new tires)
+            elif sim.state.tire_age <= 5 and len(sim.state.pit_stops) > 0 and tire_pct < 0.3:
+                strategic_decision_needed = True
+                context = f"Fresh tires: Lap {sim.state.tire_age} on {sim.state.tire_compound}"
+                # If close to someone, PUSH; otherwise MAINTAIN
+                if abs(gap_ahead) < 15.0 or gap_behind < 15.0:
+                    recommended = 0  # PUSH to capitalize
+                else:
+                    recommended = 1  # MAINTAIN to build gap
+
+            # PRIORITY 6: Last 5 laps - all out or manage
+            elif laps_remaining <= 5:
+                strategic_decision_needed = True
+                context = f"Final laps: {laps_remaining} to go"
+                # In final 5 laps, you can afford to PUSH even with worn tires
+                if abs(gap_ahead) < 10.0 or gap_behind < 10.0:
+                    recommended = 0  # PUSH - in a battle
+                else:
+                    recommended = 1  # MAINTAIN - cruise home
+
+        if strategic_decision_needed and (lap - session.last_tactical_lap) >= session.TACTICAL_COOLDOWN:
             # PAUSE - present tactical decision with CONTEXT
             session.pending_decision_type = 'TACTICAL'
             session.last_tactical_lap = lap
 
-            # Determine context and recommendation (EXACTLY like run_race_compact.py)
-            if abs(gap_ahead) < 3.0:
-                context = f"Close gap: {abs(gap_ahead):.1f}s ahead"
-                recommended = 0  # PUSH
-            elif gap_behind < 2.0:
-                context = f"Under pressure: {gap_behind:.1f}s behind"
-                recommended = 0  # PUSH
-            else:
-                context = f"P{position} - Managing position"
-                recommended = 1  # MAINTAIN
-
             return {
                 "success": True,
-                "message": f"Lap {lap} - Tactical decision",
-                "context": context,  # Add context for frontend
+                "message": f"Lap {lap} - Strategic decision",
+                "context": context,
                 "currentLap": lap,
                 "state": get_race_state_from_session(session),
-                "strategies": generate_tactical_options(recommended, context),
+                "strategies": generate_tactical_options(recommended, context, laps_remaining, sim.state.tire_age, sim.state.tire_compound, session.wear_multiplier, sim.tire_model, session.pit_plan, session.total_laps, lap),
                 "raceFinished": False
             }
 
@@ -488,26 +575,76 @@ def make_decision(request: DecisionRequest):
     }
 
 
-def calculate_live_position(sim, current_lap):
-    """Calculate current race position - COPIED from run_race_compact.py"""
+def calculate_live_position(sim, current_lap, session=None):
+    """Calculate current race position - accounts for starting grid position"""
+    starting_position = sim.state.position if current_lap < 1 else getattr(sim, 'starting_position', 3)
+
     if current_lap < 1:
-        return 3, 0.0, 0.0, 0.0
+        return starting_position, 0.0, 0.0, 0.0
+
+    # Cap at total laps to prevent position calculation beyond race end
+    total_laps = getattr(sim, 'total_laps', 57)
+    calc_lap = min(current_lap, total_laps)
+
+    # For lap 57, maintain position from lap 56
+    if calc_lap >= 56 and session and hasattr(session, 'locked_position'):
+        print(f"🏁 FINAL LAP: Maintaining locked position P{session.locked_position}")
+        # Skip all position calculation and return the locked position
+        return session.locked_position, 2.0, 2.0, (session.locked_position - 1) * 3.0
 
     standings = []
+
+    # First, get all drivers and their lap counts
+    driver_lap_counts = {}
     for driver in sim.race_data['DriverNumber'].unique():
         driver_laps = sim.race_data[sim.race_data['DriverNumber'] == driver]
-        laps_completed = driver_laps[driver_laps['LapNumber'] <= current_lap]
+        max_lap = driver_laps['LapNumber'].max()
+        driver_lap_counts[driver] = max_lap
+
+    # Categorize drivers by laps completed
+    for driver in sim.race_data['DriverNumber'].unique():
+        driver_laps = sim.race_data[sim.race_data['DriverNumber'] == driver]
+        driver_max_lap = driver_lap_counts[driver]
+
+        # Calculate laps to compare (min of calc_lap and driver's max lap)
+        compare_lap = min(calc_lap, driver_max_lap)
+        laps_completed = driver_laps[driver_laps['LapNumber'] <= compare_lap]
 
         if len(laps_completed) > 0:
             cumulative_time = laps_completed['LapTime'].sum().total_seconds()
+            # Add lap deficit penalty for lapped drivers (huge time penalty per lap behind)
+            lap_deficit = max(0, calc_lap - driver_max_lap)
+            time_with_penalty = cumulative_time + (lap_deficit * 120.0)  # 2 minutes per lap behind
+
             standings.append({
                 'driver': driver,
-                'time': cumulative_time
+                'time': time_with_penalty,
+                'laps': driver_max_lap,
+                'actual_time': cumulative_time
             })
+
+    # Calculate position accounting for grid start
+    # In F1, grid positions are ~8 meters apart
+    # At race pace (~90-100s laps on ~5km track), that's roughly 1.5s per grid row (2 positions)
+    starting_pos = getattr(sim, 'starting_position', 3)
+    GRID_SLOT_TIME = 0.75  # seconds per grid position (more realistic)
+
+    # Starting grid offset: if you start P20, you're ~14 seconds behind P1 at the start
+    # This offset fades SLOWLY - starting position matters throughout the race
+    fade_factor = max(0.6, 1.0 - (calc_lap / total_laps) * 0.5)  # Fades from 1.0 to 0.6 (keeps 60% of disadvantage)
+    grid_time_offset = (starting_pos - 1) * GRID_SLOT_TIME * fade_factor
+
+    # Check if we've been lapped
+    session = getattr(sim, '_session', None)
+    your_laps = calc_lap
+    if session and hasattr(session, 'was_lapped') and session.was_lapped:
+        your_laps = getattr(session, 'laps_completed', calc_lap)
 
     standings.append({
         'driver': 'YOU',
-        'time': sim.state.total_race_time
+        'time': sim.state.total_race_time + grid_time_offset,
+        'laps': your_laps,
+        'actual_time': sim.state.total_race_time
     })
 
     standings.sort(key=lambda x: x['time'])
@@ -515,49 +652,207 @@ def calculate_live_position(sim, current_lap):
     user_idx = next(i for i, s in enumerate(standings) if s['driver'] == 'YOU')
     position = user_idx + 1
 
+    # Debug lap 57 issue
+    if calc_lap >= 56:
+        print(f"🔍 LAP {calc_lap} DEBUG:")
+        print(f"   Your raw time: {sim.state.total_race_time:.1f}s")
+        print(f"   Grid offset: {grid_time_offset:.1f}s (fade: {fade_factor:.2f})")
+        print(f"   Your total: {sim.state.total_race_time + grid_time_offset:.1f}s")
+        print(f"   Position: P{position}")
+        # Show times of cars around you
+        for i in range(max(0, user_idx-2), min(len(standings), user_idx+3)):
+            driver = standings[i]['driver']
+            time = standings[i]['time']
+            pos = i + 1
+            marker = " <-- YOU" if driver == 'YOU' else ""
+            print(f"   P{pos}: {driver} - {time:.1f}s{marker}")
+
+    # Calculate gaps (positive = behind, negative = ahead)
+    # Car ahead is at user_idx - 1 (lower time = faster)
     gap_to_ahead = 0.0 if user_idx == 0 else sim.state.total_race_time - standings[user_idx - 1]['time']
+
+    # Car behind is at user_idx + 1 (higher time = slower)
     gap_to_behind = 0.0 if user_idx == len(standings) - 1 else standings[user_idx + 1]['time'] - sim.state.total_race_time
+
+    # Gap to leader (always positive if not leading)
     leader_gap = sim.state.total_race_time - standings[0]['time'] if user_idx > 0 else 0.0
+
+    # Debug logging
+    print(f"📊 Lap {calc_lap}: P{position} | Your time: {sim.state.total_race_time:.1f}s | Gap ahead: {gap_to_ahead:+.1f}s | Gap behind: {gap_to_behind:+.1f}s")
 
     return position, gap_to_ahead, gap_to_behind, leader_gap
 
 def get_race_state_from_session(session):
-    """Get race state from session"""
+    """Get race state from session with live position info"""
+    sim = session.simulator
+    current_lap = sim.state.current_lap - 1 if sim.state.current_lap > 0 else 0
+
+    # Get live gaps
+    position, gap_ahead, gap_behind, leader_gap = calculate_live_position(sim, current_lap)
+
+    # Format gaps for display
+    gap_ahead_str = "Leader" if gap_ahead == 0 else f"{gap_ahead:+.1f}s"
+    gap_behind_str = "Last" if gap_behind == 0 else f"{gap_behind:+.1f}s"
+
+    print(f"🔍 State returned: P{position} | Gap ahead: {gap_ahead_str} | Gap behind: {gap_behind_str}")
+
     return {
-        "position": session.simulator.state.position,
-        "tireCompound": session.simulator.state.tire_compound,
-        "tireAge": session.simulator.state.tire_age,
-        "drivingStyle": session.simulator.state.driving_style.value,
-        "totalRaceTime": session.simulator.state.total_race_time,
-        "pitStops": len(session.simulator.state.pit_stops)
+        "position": position,
+        "gapAhead": gap_ahead_str,
+        "gapBehind": gap_behind_str,
+        "tireCompound": sim.state.tire_compound,
+        "tireAge": sim.state.tire_age,
+        "drivingStyle": sim.state.driving_style.value,
+        "totalRaceTime": sim.state.total_race_time,
+        "pitStops": len(sim.state.pit_stops)
     }
 
-def generate_tactical_options(recommended, context=""):
-    """Generate tactical decision options with context - MATCHES run_race_compact.py"""
+def generate_tactical_options(recommended, context="", laps_remaining=20, current_tire_age=10, current_compound='MEDIUM', current_wear_multiplier=1.0, tire_model=None, pit_plan=None, total_laps=57, current_lap=1):
+    """Generate tactical decision options with full race impact analysis (including pit stop costs)"""
+
+    TACTICAL_DURATION = 3  # PUSH/CONSERVE last 3 laps
+
+    # Tactical modifiers (pace impact, wear multiplier change)
+    # PUSH and CONSERVE are TEMPORARY 3-lap bursts, MAINTAIN is permanent
     opts = [
-        {'id': 1, 'name': 'PUSH', 'impact': '-0.2s/lap +20%wear', 'pace': -0.2, 'wear': 0.2},
-        {'id': 2, 'name': 'MAINTAIN', 'impact': 'No change', 'pace': 0.0, 'wear': 0.0},
-        {'id': 3, 'name': 'CONSERVE', 'impact': '+0.2s/lap -20%wear', 'pace': 0.2, 'wear': -0.2}
+        {'id': 1, 'name': 'PUSH (3 laps)', 'pace_delta': -0.15, 'wear_mult': 1.2, 'duration': TACTICAL_DURATION},
+        {'id': 2, 'name': 'MAINTAIN', 'pace_delta': 0.0, 'wear_mult': 1.0, 'duration': laps_remaining},
+        {'id': 3, 'name': 'CONSERVE (3 laps)', 'pace_delta': 0.15, 'wear_mult': 0.8, 'duration': TACTICAL_DURATION}
     ]
 
-    return [{
-        "id": opt['id'],
-        "option": f"OPTION {opt['id']}",
-        "title": opt['name'],
-        "description": opt['impact'],
-        "reasoning": f"{context} - {opt['name']} pace strategy",
-        "raceTimeImpact": f"{opt['pace'] * 20:+.1f}s over 20 laps",
-        "lapTimeImpact": f"{opt['pace']:+.1f}s",
-        "tireWear": f"{1.0 + opt['wear']:.1f}x",
-        "pros": [],
-        "cons": [],
-        "confidence": "HIGHLY_RECOMMENDED" if i == recommended else ("RECOMMENDED" if i == 1 else "ALTERNATIVE"),
-        "decisionType": "TACTICAL",
-        "params": opt
-    } for i, opt in enumerate(opts)]
+    strategies = []
+
+    for i, opt in enumerate(opts):
+        # Calculate tire life with this strategy
+        max_tire_laps = tire_model.COMPOUND_WEAR_RATES[current_compound]['max_laps']
+        effective_wear_rate = current_wear_multiplier * opt['wear_mult']
+
+        # How many laps can we go on current tires with this strategy?
+        laps_on_current_tires = int((max_tire_laps - current_tire_age) / effective_wear_rate)
+
+        # Determine if this forces an extra pit stop
+        needs_extra_pit = False
+        laps_to_cover = 0
+
+        if pit_plan is None:
+            # No pit planned - need to make it to race end on current tires
+            laps_to_cover = laps_remaining
+            needs_extra_pit = laps_on_current_tires < laps_remaining and laps_remaining > 5
+        else:
+            # Pit is planned - check TWO things:
+            # 1. Can we make it to the planned pit?
+            laps_until_planned_pit = pit_plan[0] - current_lap
+
+            if laps_on_current_tires < laps_until_planned_pit:
+                # Can't even make planned pit - need emergency pit
+                needs_extra_pit = True
+                laps_to_cover = laps_remaining
+            else:
+                # We can make the planned pit. But will the NEXT stint last to the end?
+                laps_after_planned_pit = laps_remaining - laps_until_planned_pit
+                planned_compound = pit_plan[1] if pit_plan[1] else 'HARD'
+                next_stint_max_laps = tire_model.COMPOUND_WEAR_RATES[planned_compound]['max_laps']
+                next_stint_laps_available = int(next_stint_max_laps / effective_wear_rate)
+
+                if next_stint_laps_available < laps_after_planned_pit and laps_after_planned_pit > 3:
+                    # Next stint won't make it to the end - need ANOTHER pit
+                    needs_extra_pit = True
+                    laps_to_cover = laps_remaining
+                else:
+                    # We're good - no extra pit needed
+                    laps_to_cover = laps_until_planned_pit
+
+        # Debug logging
+        if i == 0:
+            print(f"🔧 Tactical calc: {opt['name']} | Tire: {current_compound} age {current_tire_age}/{max_tire_laps} | Wear mult: {effective_wear_rate:.2f}")
+            print(f"   Can do {laps_on_current_tires} more laps | Need to cover {laps_to_cover} laps | Extra pit? {needs_extra_pit}")
+            if pit_plan:
+                print(f"   Pit plan: Lap {pit_plan[0]} → {pit_plan[1]}")
+
+        # Calculate NET race impact (only for the duration of the tactical mode)
+        duration = opt['duration']
+        lap_time_savings = opt['pace_delta'] * duration  # Impact over 3 laps for PUSH/CONSERVE
+        pit_stop_cost = 25.0 if needs_extra_pit else 0.0
+        net_race_impact = lap_time_savings + pit_stop_cost
+
+        # Build pros/cons based on strategy
+        pros = []
+        cons = []
+
+        if 'PUSH' in opt['name']:
+            if not needs_extra_pit:
+                pros.append(f"Save {abs(lap_time_savings):.1f}s over {duration} laps")
+                pros.append("Attack or defend for 3 laps")
+                pros.append("Then auto-revert to MAINTAIN")
+            else:
+                cons.append(f"⚠️ Forces extra pit stop (+25s)")
+                cons.append(f"NET LOSS: {net_race_impact:+.1f}s total")
+            cons.append(f"Tires wear 20% faster for {duration} laps")
+
+        elif 'MAINTAIN' in opt['name']:
+            pros.append("Balanced tire management")
+            pros.append(f"Current tires good for ~{laps_on_current_tires} laps")
+            if not needs_extra_pit:
+                pros.append("No extra pit stop needed")
+            cons.append("No pace advantage")
+
+        else:  # CONSERVE
+            pros.append(f"Save ~{duration * 0.2:.1f} laps of tire life")
+            pros.append(f"Preserve tires for {duration} laps")
+            pros.append("Then auto-revert to MAINTAIN")
+            if needs_extra_pit and laps_on_current_tires >= laps_to_cover:
+                pros.append("✓ Avoids extra pit stop")
+            cons.append(f"Lose {abs(lap_time_savings):.1f}s over {duration} laps")
+            cons.append("May drop positions")
+
+        # Determine confidence based on net race impact
+        if needs_extra_pit:
+            confidence = "NOT_RECOMMENDED"  # Forces extra pit = bad
+        elif i == recommended:
+            confidence = "HIGHLY_RECOMMENDED"
+        elif abs(net_race_impact) < 5.0:
+            confidence = "RECOMMENDED"  # Close alternative
+        else:
+            confidence = "ALTERNATIVE"
+
+        strategies.append({
+            "id": opt['id'],
+            "option": f"OPTION {opt['id']}",
+            "title": f"{opt['name']} Strategy",
+            "description": f"NET: {net_race_impact:+.1f}s total race impact" if needs_extra_pit else f"{opt['pace_delta']:+.1f}s/lap",
+            "reasoning": f"{context}",
+            "raceTimeImpact": f"{net_race_impact:+.1f}s NET (incl. pit stops)" if needs_extra_pit else f"{lap_time_savings:+.1f}s over {laps_to_cover} laps",
+            "lapTimeImpact": f"{opt['pace_delta']:+.1f}s per lap",
+            "tireWear": f"{opt['wear_mult']:.1f}x wear rate",
+            "pros": pros,
+            "cons": cons,
+            "confidence": confidence,
+            "decisionType": "TACTICAL",
+            "params": {'pace': opt['pace_delta'], 'wear': opt['wear_mult']}
+        })
+
+    return strategies
 
 def generate_pit_options(window, total_laps, current_lap, wear_multiplier, tire_model):
     """Generate pit stop options with tire compound selection - MATCHES run_race_compact.py"""
+    # If no optimal lap (too close to race end), return "stay out" only
+    if window['optimal_lap'] is None:
+        return [{
+            "id": 1,
+            "option": "OPTION 1",
+            "title": "Stay Out - Race to Finish",
+            "description": "⭐ AI Recommended: No pit stop beneficial",
+            "reasoning": "Too close to race end - any pit stop would lose positions",
+            "raceTimeImpact": "+0.0s",
+            "lapTimeImpact": "Current tires to finish",
+            "tireWear": f"Current: {window['current_state']['tire_age']} laps",
+            "pros": ["No time loss", "Maintain track position"],
+            "cons": ["Degraded tires"],
+            "confidence": "HIGHLY_RECOMMENDED",
+            "decisionType": "STAY_OUT",
+            "params": {}
+        }]
+
     laps_remaining = total_laps - window['optimal_lap']
 
     # Get tire capabilities adjusted for driving style

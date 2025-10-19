@@ -310,7 +310,7 @@ function AgentDashboard() {
           {/* Tire Data Agent */}
           <div className="agent-card" onClick={() => setIsTireModalOpen(true)} style={{cursor: 'pointer'}}>
             <div className="agent-header">
-              <div className="agent-icon">🛞</div>
+              <div className="agent-icon"><img src="/tireagent.png" alt="Tire Agent" /></div>
               <div className="agent-name">TIRE DATA AGENT</div>
               <div className={`agent-status ${insights.tire.status || 'active'}`}>
                 {insights.tire.status || 'ACTIVE'}
@@ -348,7 +348,7 @@ function AgentDashboard() {
           {/* LapTime Agent */}
           <div className="agent-card" onClick={() => setIsLaptimeModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
-              <div className="agent-icon">⏱️</div>
+              <div className="agent-icon"><img src="/stopwatch agent.png" alt="Laptime Agent" /></div>
               <div className="agent-name">LAPTIME AGENT</div>
               <div className={`agent-status ${insights.laptime.status || 'active'}`}>
                 {insights.laptime.status || 'ACTIVE'}
@@ -575,7 +575,7 @@ function AgentDashboard() {
           {/* Position Agent */}
           <div className="agent-card" onClick={() => setIsPositionModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
-              <div className="agent-icon">🏁</div>
+              <div className="agent-icon"><img src="/flagAgent.png" alt="Position Agent" /></div>
               <div className="agent-name">POSITION AGENT</div>
               <div className={`agent-status ${insights.position.status || 'active'}`}>
                 {insights.position.status || 'ACTIVE'}
@@ -624,7 +624,7 @@ function AgentDashboard() {
             style={{cursor: 'pointer'}}
           >
             <div className="agent-header">
-              <div className="agent-icon">🎯</div>
+              <div className="agent-icon"><img src="/trackagent.png" alt="Competitor Agent" /></div>
               <div className="agent-name">COMPETITOR AGENT</div>
               <div className={`agent-status ${insights.competitor.status || 'active'}`}>
                 {insights.competitor.status || 'ACTIVE'}

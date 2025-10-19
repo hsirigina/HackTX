@@ -65,7 +65,7 @@ function LaptimeModal({ isOpen, onClose, laptimeData }) {
         {/* Header */}
         <div className="laptime-modal-header">
           <div className="laptime-modal-title">
-            <span className="laptime-icon">⏱️</span>
+            <span className="laptime-icon"><img src="/stopwatch agent.png" alt="Laptime Agent" /></span>
             LAPTIME ANALYSIS
           </div>
           <button className="laptime-close-btn" onClick={handleClose}>✕</button>
