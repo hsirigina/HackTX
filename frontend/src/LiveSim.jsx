@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import './AgentDashboard.css'
+import TireModal from './TireModal'
+import LaptimeModal from './LaptimeModal'
+import PositionModal from './PositionModal'
 
 const API_BASE_URL = 'http://localhost:8000'
 const SESSION_ID = 'live-sim-' + Date.now()
@@ -38,6 +41,11 @@ function LiveSim() {
   const [touchStart, setTouchStart] = useState(0)
   const [touchEnd, setTouchEnd] = useState(0)
   const [isSliding, setIsSliding] = useState(false)
+
+  // Modal state
+  const [isTireModalOpen, setIsTireModalOpen] = useState(false)
+  const [isLaptimeModalOpen, setIsLaptimeModalOpen] = useState(false)
+  const [isPositionModalOpen, setIsPositionModalOpen] = useState(false)
 
   // Load available races on mount
   useEffect(() => {
@@ -282,7 +290,7 @@ function LiveSim() {
         {/* Left Column - Placeholder Agents */}
         <div className="agents-column">
           {/* Tire Data Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsTireModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
               <div className="agent-icon">🛞</div>
               <div className="agent-name">TIRE DATA AGENT</div>
@@ -318,7 +326,7 @@ function LiveSim() {
           </div>
 
           {/* LapTime Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsLaptimeModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
               <div className="agent-icon">⏱️</div>
               <div className="agent-name">LAPTIME AGENT</div>
@@ -749,7 +757,7 @@ function LiveSim() {
         {/* Right Column - Position & Competitor Agents */}
         <div className="agents-column">
           {/* Position Agent */}
-          <div className="agent-card">
+          <div className="agent-card" onClick={() => setIsPositionModalOpen(true)} style={{ cursor: 'pointer' }}>
             <div className="agent-header">
               <div className="agent-icon">🏁</div>
               <div className="agent-name">POSITION AGENT</div>
@@ -856,6 +864,41 @@ function LiveSim() {
           )}
         </div>
       </div>
+
+      {/* Tire Modal */}
+      <TireModal
+        isOpen={isTireModalOpen}
+        onClose={() => setIsTireModalOpen(false)}
+        tireData={{
+          compound: raceState.tireCompound,
+          age: raceState.tireAge,
+          degradation: insights?.tire?.degradation
+        }}
+      />
+
+      {/* Laptime Modal */}
+      <LaptimeModal
+        isOpen={isLaptimeModalOpen}
+        onClose={() => setIsLaptimeModalOpen(false)}
+        laptimeData={{
+          current_time: insights?.laptime?.current_time,
+          avg_time: insights?.laptime?.avg_time,
+          trend: insights?.laptime?.trend
+        }}
+        selectedRace={selectedRace}
+      />
+
+      {/* Position Modal */}
+      <PositionModal
+        isOpen={isPositionModalOpen}
+        onClose={() => setIsPositionModalOpen(false)}
+        positionData={{
+          position: raceState.position,
+          gap_ahead: insights?.position?.gap_ahead,
+          gap_behind: insights?.position?.gap_behind,
+          pit_delta: insights?.position?.pit_delta
+        }}
+      />
     </div>
   )
 }

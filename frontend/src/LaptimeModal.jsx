@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import './LaptimeModal.css'
 
-function LaptimeModal({ isOpen, onClose, laptimeData }) {
+function LaptimeModal({ isOpen, onClose, laptimeData, selectedRace }) {
   const [animateIn, setAnimateIn] = useState(false)
   const [animateBars, setAnimateBars] = useState(false)
 
@@ -90,28 +90,24 @@ function LaptimeModal({ isOpen, onClose, laptimeData }) {
             {/* Track Info */}
             <div className="track-info-grid">
               <div className="track-info-box">
-                <div className="info-icon">📏</div>
                 <div className="info-text">
                   <div className="info-label">Circuit Length</div>
                   <div className="info-value">{mockData.trackLength} km</div>
                 </div>
               </div>
               <div className="track-info-box">
-                <div className="info-icon">🔄</div>
                 <div className="info-text">
                   <div className="info-label">Total Corners</div>
                   <div className="info-value">{mockData.totalCorners} Turns</div>
                 </div>
               </div>
               <div className="track-info-box">
-                <div className="info-icon">⚡</div>
                 <div className="info-text">
                   <div className="info-label">DRS Zones</div>
                   <div className="info-value">{mockData.drsZones} Zones</div>
                 </div>
               </div>
               <div className="track-info-box">
-                <div className="info-icon">🏆</div>
                 <div className="info-text">
                   <div className="info-label">Lap Record</div>
                   <div className="info-value">{mockData.lapRecord}</div>
@@ -123,15 +119,23 @@ function LaptimeModal({ isOpen, onClose, laptimeData }) {
             <div className="circuit-map-section">
               <div className="section-title">CIRCUIT MAP</div>
               <div className="circuit-image-container">
-                <img src="/track1.png" alt="Circuit Map" className="circuit-image" />
+                {selectedRace ? (
+                  <img 
+                    src={`/tracks/${selectedRace.id}.svg`} 
+                    alt={selectedRace.name || "Circuit Map"} 
+                    className="circuit-image"
+                    style={{
+                      filter: 'drop-shadow(0 0 10px rgba(0, 191, 255, 0.3))'
+                    }}
+                    onError={(e) => {
+                      console.error(`Failed to load track: /tracks/${selectedRace.id}.svg`)
+                      e.target.src = "/track1.png" // Fallback to generic image
+                    }}
+                  />
+                ) : (
+                  <img src="/track1.png" alt="Circuit Map" className="circuit-image" />
+                )}
               </div>
-            </div>
-
-            {/* Average Lap */}
-            <div className="avg-lap-info">
-              <div className="avg-label">AVERAGE LAP TIME (5 LAPS)</div>
-              <div className="avg-time">{mockData.avgLap}s</div>
-              <div className="avg-trend">TREND: {mockData.trend}</div>
             </div>
           </div>
 
@@ -148,11 +152,11 @@ function LaptimeModal({ isOpen, onClose, laptimeData }) {
                       <div className="corner-name">{corner.name}</div>
                       <div className="corner-speeds">
                         <div className="speed-item">
-                          <span className="speed-label">Entry:</span>
+                          <span className="speed-label">Entry: </span>
                           <span className="speed-value">{corner.entry} km/h</span>
                         </div>
                         <div className="speed-item">
-                          <span className="speed-label">Apex:</span>
+                          <span className="speed-label">Apex: </span>
                           <span className="speed-value">{corner.apex} km/h</span>
                         </div>
                       </div>
@@ -187,7 +191,7 @@ function LaptimeModal({ isOpen, onClose, laptimeData }) {
 
             {/* Circuit Name */}
             <div className="circuit-name-section">
-              <div className="circuit-label">BAHRAIN INTERNATIONAL CIRCUIT</div>
+              <div className="circuit-label">{selectedRace?.name?.toUpperCase() || 'BAHRAIN INTERNATIONAL CIRCUIT'}</div>
               <div className="circuit-location">Sakhir, Bahrain</div>
             </div>
           </div>
