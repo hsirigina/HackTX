@@ -1,0 +1,120 @@
+# NVIDIA Agent IQ Configuration
+# This file configures the AI agents used for F1 race strategy analysis
+# Agent IQ SDK Version: 2.1.3
+# CUDA Compute Capability: 8.6+
+
+version: "2.1"
+runtime:
+  platform: "nvidia-agentiq"
+  gpu_enabled: true
+  tensor_cores: true
+  precision: "fp16"  # Use mixed precision for faster inference
+
+agents:
+  # Tire Degradation Analysis Agent
+  tire_agent:
+    model: "nvidia/tire-degradation-forecasting-v3"
+    description: "Predicts tire wear patterns and optimal pit windows using temporal convolutional networks"
+    endpoint: "http://localhost:8080/v1/agents/tire"
+    parameters:
+      model_type: "TCN"  # Temporal Convolutional Network
+      sequence_length: 15  # Analyze last 15 laps
+      prediction_horizon: 20  # Predict next 20 laps
+      compounds: ["SOFT", "MEDIUM", "HARD"]
+      features:
+        - lap_time_delta
+        - tire_temperature
+        - track_temperature
+        - fuel_load
+        - driving_style_factor
+    gpu_allocation: 0.25  # 25% of GPU memory
+    batch_size: 1
+    latency_target_ms: 150
+
+  # Lap Time Optimization Agent
+  laptime_agent:
+    model: "nvidia/laptime-optimization-transformer-v2"
+    description: "Transformer-based model for lap time prediction and racing line optimization"
+    endpoint: "http://localhost:8080/v1/agents/laptime"
+    parameters:
+      model_type: "transformer"
+      attention_heads: 8
+      hidden_layers: 6
+      context_window: 10  # Last 10 laps for context
+      features:
+        - sector_times
+        - corner_speeds
+        - throttle_position
+        - brake_pressure
+        - drs_usage
+        - ers_deployment
+    gpu_allocation: 0.25
+    batch_size: 1
+    latency_target_ms: 100
+
+  # Position Strategy Agent
+  position_agent:
+    model: "nvidia/race-position-lstm-v4"
+    description: "LSTM network for overtaking opportunity detection and defensive positioning"
+    endpoint: "http://localhost:8080/v1/agents/position"
+    parameters:
+      model_type: "LSTM"
+      sequence_length: 20
+      hidden_units: 128
+      dropout: 0.2
+      features:
+        - gap_to_car_ahead
+        - gap_to_car_behind
+        - relative_pace
+        - tire_age_differential
+        - drs_availability
+        - track_position
+    gpu_allocation: 0.20
+    batch_size: 1
+    latency_target_ms: 120
+
+  # Competitor Analysis Agent
+  competitor_agent:
+    model: "nvidia/competitor-behavior-gnn-v2"
+    description: "Graph Neural Network for modeling competitor strategies and predicting their decisions"
+    endpoint: "http://localhost:8080/v1/agents/competitor"
+    parameters:
+      model_type: "GNN"  # Graph Neural Network
+      num_competitors: 19
+      graph_layers: 4
+      aggregation: "attention"  # Attention-based aggregation
+      features:
+        - competitor_lap_times
+        - tire_strategies
+        - pit_stop_history
+        - team_tendencies
+        - driver_aggression_index
+        - fuel_saving_patterns
+    gpu_allocation: 0.30
+    batch_size: 1
+    latency_target_ms: 200
+
+# Model serving configuration
+serving:
+  framework: "triton"  # NVIDIA Triton Inference Server
+  protocol: "grpc"
+  max_batch_delay_ms: 50
+  preferred_batch_sizes: [1, 2, 4]
+
+# Monitoring and telemetry
+telemetry:
+  enabled: true
+  metrics_port: 8081
+  metrics:
+    - inference_latency
+    - gpu_utilization
+    - model_accuracy
+    - throughput_qps
+  logging_level: "INFO"
+
+# Resource management
+resources:
+  gpu_device_id: 0
+  max_gpu_memory_gb: 4
+  cpu_threads: 4
+  system_memory_gb: 8

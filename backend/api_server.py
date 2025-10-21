@@ -8,7 +8,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Dict, Optional
 from interactive_race_simulator import InteractiveRaceSimulator, DecisionOption
+from supabase import create_client
+import os
+from dotenv import load_dotenv
 import uvicorn
+
+load_dotenv()
+
+# Supabase connection for Arduino display
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+supabase_client = None
+
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase_client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        print("✅ Supabase connected for Arduino display updates")
+    except Exception as e:
+        print(f"⚠️  Supabase connection failed: {e}")
 
 app = FastAPI(title="F1 Race Strategy API")
 
@@ -82,6 +99,35 @@ class RaceStateResponse(BaseModel):
     pitStops: int
     strategies: List[StrategyOptionResponse]
     raceFinished: bool = False
+
+
+# Helper function to send messages to Arduino display via Supabase
+def send_to_arduino_display(message: str, message_type: str = 'STRATEGY', priority: int = 5):
+    """Send a message to the Arduino display via Supabase driver_display table"""
+    if not supabase_client:
+        print(f"⚠️  [API→SUPABASE] Cannot send to Arduino: Supabase not connected")
+        return
+
+    try:
+        print(f"\n{'='*70}")
+        print(f"📤 [API→SUPABASE] Uploading message to Supabase:")
+        print(f"   Type: {message_type}")
+        print(f"   Message: {message}")
+        print(f"   Priority: {priority}")
+
+        result = supabase_client.table('driver_display').insert({
+            'message_type': message_type,
+            'content': {'message': message},
+            'priority': priority,
+            'acknowledged': False
+        }).execute()
+
+        msg_id = result.data[0]['id'] if result.data else 'unknown'
+        print(f"✅ [API→SUPABASE] Successfully uploaded to Supabase (ID: {msg_id})")
+        print(f"{'='*70}\n")
+    except Exception as e:
+        print(f"❌ [API→SUPABASE] Failed to upload: {e}")
+        print(f"{'='*70}\n")
 
 
 @app.get("/")
@@ -356,13 +402,17 @@ def make_decision(request: DecisionRequest):
             from driving_style import DrivingStyle
             sim.state.driving_style = DrivingStyle[style_map[request.option_id]]
 
+            # Send to Arduino display with descriptive message
+            style_name = style_map[request.option_id]
+            send_to_arduino_display(f"{style_name} DRIVING MODE", 'STRATEGY', priority=5)
+
     elif session.pending_decision_type == 'TACTICAL':
         # Apply tactical decision (PUSH, MAINTAIN, CONSERVE)
         # IMPORTANT: PUSH/CONSERVE are TEMPORARY (3 laps), then auto-revert to MAINTAIN
         tactical_map = {
-            1: {'pace': -0.15, 'wear': 1.2, 'temporary': True},   # PUSH: 3 lap burst
-            2: {'pace': 0.0, 'wear': 1.0, 'temporary': False},    # MAINTAIN: permanent
-            3: {'pace': 0.15, 'wear': 0.8, 'temporary': True}     # CONSERVE: 3 lap burst
+            1: {'pace': -0.15, 'wear': 1.2, 'temporary': True, 'name': 'PUSH'},
+            2: {'pace': 0.0, 'wear': 1.0, 'temporary': False, 'name': 'MAINTAIN'},
+            3: {'pace': 0.15, 'wear': 0.8, 'temporary': True, 'name': 'CONSERVE'}
         }
         if request.option_id in tactical_map:
             params = tactical_map[request.option_id]
@@ -376,6 +426,15 @@ def make_decision(request: DecisionRequest):
                 print(f"⏱️  Tactical mode active for {session.TACTICAL_DURATION} laps (expires lap {session.tactical_mode_expires_lap})")
             else:
                 session.tactical_mode_expires_lap = None  # MAINTAIN has no expiry
+
+            # Send to Arduino display with descriptive message
+            tactic_name = params['name']
+            if params['temporary']:
+                # For PUSH/CONSERVE, show duration
+                send_to_arduino_display(f"{tactic_name} FOR {session.TACTICAL_DURATION} LAPS", 'STRATEGY', priority=5)
+            else:
+                # For MAINTAIN
+                send_to_arduino_display(f"{tactic_name} PACE", 'STRATEGY', priority=5)
 
     elif session.pending_decision_type == 'PIT':
         # User selected pit option - extract lap and compound from option params
@@ -393,6 +452,9 @@ def make_decision(request: DecisionRequest):
             chosen_compound = compound_map.get(request.option_id, window['optimal_compound'])
             session.pit_plan = (window['optimal_lap'], chosen_compound)
             print(f"✅ Pit plan set: Lap {window['optimal_lap']} → {chosen_compound}")
+
+            # Send to Arduino display with lap and tire info on two lines
+            send_to_arduino_display(f"PIT LAP {window['optimal_lap']}|{chosen_compound} TIRES", 'STRATEGY', priority=5)
 
     # Now simulate laps until next decision point (EXACTLY like run_race_compact.py loop)
     from pit_window_selector import PitWindowSelector
@@ -569,7 +631,11 @@ def make_decision(request: DecisionRequest):
     print(f"   Position: P{final_comparison['leaderboard_position']} / {final_comparison['total_drivers']}")
     print(f"   Leaderboard entries: {len(final_comparison['full_leaderboard'])}")
     print(f"   Winner: {final_comparison['full_leaderboard'][0]['driver']} - {final_comparison['full_leaderboard'][0]['time']:.1f}s")
-    
+
+    # Send race finished message to Arduino
+    position = final_comparison['leaderboard_position']
+    send_to_arduino_display(f"RACE FINISHED|P{position}", 'STRATEGY', priority=10)
+
     return {
         "success": True,
         "message": "Race finished!",

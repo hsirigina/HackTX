@@ -18,7 +18,18 @@
       "Bash(python3.12 --version)",
       "Bash(python3.12 -m venv venv)",
       "Bash(pip install -r requirements.txt)",
-      "Bash(python gesture_server.py)"
+      "Bash(python gesture_server.py)",
+      "Bash(grep:*)",
+      "Bash(arduino-cli board:*)",
+      "Read(//dev/**)",
+      "Read(//Applications/**)",
+      "Bash(brew install:*)",
+      "Bash(arduino-cli upload:*)",
+      "Bash(chmod:*)",
+      "Bash(pkill:*)",
+      "Bash(lsof:*)",
+      "Bash(xargs kill:*)",
+      "Bash(arduino-cli compile:*)"
     ],
     "deny": [],
     "ask": []

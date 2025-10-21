@@ -29,18 +29,12 @@
 - Real-time wear patterns
 - Optimal pit window recommendations
 
-*Show tire degradation percentage updating live*
-
-**"See this degradation percentage? It's calculating in real-time based on the tire model, track temperature, and driving style. When degradation hits critical levels, the agent triggers an alert."**
-
 ### 2. **Lap Time Agent** (Click to open)
 **"The Lap Time Agent analyzes your pace:**
 - Current lap time vs. average
 - Sector-by-sector performance
 - Trend analysis (improving or degrading)
 - Comparison against competitors
-
-**"Notice it's tracking whether you're getting faster or slower - crucial for knowing if your tires are falling off a cliff."**
 
 ### 3. **Position Agent** (Click to open)
 **"The Position Agent is your tactical radar:**

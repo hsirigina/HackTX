@@ -132,13 +132,25 @@ void processCommand(String cmd) {
   Serial.println(cmd);
   
   if (cmd.startsWith("MSG:")) {
-    // Regular message
+    // Regular message - support multi-line with | separator
     String msg = cmd.substring(4);
     displayMode = 0;
-    line1 = msg;
-    line2 = "";
-    line3 = "";
-    line4 = "";
+
+    // Check if message contains | for multi-line
+    int pipeIndex = msg.indexOf('|');
+    if (pipeIndex != -1) {
+      // Multi-line message
+      line1 = msg.substring(0, pipeIndex);
+      line2 = msg.substring(pipeIndex + 1);
+      line3 = "";
+      line4 = "";
+    } else {
+      // Single line message
+      line1 = msg;
+      line2 = "";
+      line3 = "";
+      line4 = "";
+    }
   }
   else if (cmd == "BUZZ:PIT") {
     // Pit stop buzzer
